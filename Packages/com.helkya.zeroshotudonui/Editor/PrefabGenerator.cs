@@ -11,7 +11,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using VRC.Udon;
 
-// FND-04・FND-05・FND-08・LAY-01・LAY-03・LAY-04・CMP-01・CMP-03・CMP-04・CMP-05・CMP-06・CMP-08・CMP-09・CMP-11
+// FND-04・FND-05・FND-08・LAY-01・LAY-03・LAY-04・LAY-05・LAY-06・LAY-07・CMP-01・CMP-03・CMP-04・CMP-05・CMP-06・CMP-08・CMP-09・CMP-11
 namespace ZeroShotUdonUI.EditorTools
 {
     internal enum PrefabKind
@@ -32,12 +32,15 @@ namespace ZeroShotUdonUI.EditorTools
         LabelBody,
         LabelCaption,
         ProgressBar,
+        ScrollArea,
 
         // 他のプレハブを中に含むものは、含まれる側より後に並べる。この順番で生成するため。
         ButtonIcon,
         Checkbox,
         Stepper,
         Window,
+        Tabs,
+        Dialog,
     }
 
     /// <summary>
@@ -59,6 +62,12 @@ namespace ZeroShotUdonUI.EditorTools
         private const float StackSpacing = 16f;
         private const float SegmentSpacing = 8f;
         private const float CheckboxLabelGap = 12f;
+        private const float ScrollbarWidth = 12f;
+        private const float ScrollbarGap = 12f;
+        private const float TabsHeaderHeight = 48f;
+
+        // マウスのホイールを1目盛り回したときに動く量（Canvas 単位）。
+        private const float ScrollSensitivity = 40f;
         private const float OutlineWidth = 2f;
         private const float WindowPadding = UIBuilder.ContentPadding;
         private const float WindowTitleTop = 28f;
@@ -81,6 +90,10 @@ namespace ZeroShotUdonUI.EditorTools
         private static readonly Vector2 CheckboxBoxSize = new Vector2(32f, 32f);
         private static readonly Vector2 CheckboxCheckSize = new Vector2(20f, 20f);
         private static readonly Vector2 StepperSize = new Vector2(200f, 48f);
+        private static readonly Vector2 ScrollAreaSize = new Vector2(520f, 300f);
+        private static readonly Vector2 TabsSize = new Vector2(520f, 400f);
+        private static readonly Vector2 DialogSize = new Vector2(480f, 260f);
+        private static readonly Vector2 DialogButtonSize = new Vector2(180f, 56f);
 
         // マテリアルを新規作成するときの初期値。作成後はマテリアル側が正となり、ここを変えても反映されない。
         private static readonly Color SurfaceColor = new Color(0.09f, 0.10f, 0.13f, 0.96f);
@@ -211,6 +224,9 @@ namespace ZeroShotUdonUI.EditorTools
                 case PrefabKind.Checkbox: return PrefabFolder + "/Components/ZS_Checkbox.prefab";
                 case PrefabKind.Stepper: return PrefabFolder + "/Components/ZS_Stepper.prefab";
                 case PrefabKind.Window: return PrefabFolder + "/Layouts/ZS_Window.prefab";
+                case PrefabKind.ScrollArea: return PrefabFolder + "/Layouts/ZS_ScrollArea.prefab";
+                case PrefabKind.Tabs: return PrefabFolder + "/Layouts/ZS_Tabs.prefab";
+                case PrefabKind.Dialog: return PrefabFolder + "/Layouts/ZS_Dialog.prefab";
                 default: throw new System.ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
         }
@@ -239,6 +255,9 @@ namespace ZeroShotUdonUI.EditorTools
                 case PrefabKind.Checkbox: return BuildCheckbox();
                 case PrefabKind.Stepper: return BuildStepper();
                 case PrefabKind.Window: return BuildWindow();
+                case PrefabKind.ScrollArea: return BuildScrollArea();
+                case PrefabKind.Tabs: return BuildTabs();
+                case PrefabKind.Dialog: return BuildDialog();
                 default: throw new System.ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
         }
@@ -438,7 +457,15 @@ namespace ZeroShotUdonUI.EditorTools
         private static GameObject BuildStack(bool vertical)
         {
             RectTransform rect = CreateRect("Stack", null, vertical ? VerticalStackSize : HorizontalStackSize);
+            AddStackLayout(rect, vertical);
 
+            SetLayoutWidth(rect, true);
+            return rect.gameObject;
+        }
+
+        // 子を等間隔で並べる設定を付ける。自動配置の枠と、スクロール領域の中身で使う。
+        private static void AddStackLayout(RectTransform rect, bool vertical)
+        {
             HorizontalOrVerticalLayoutGroup layout;
             if (vertical)
             {
@@ -461,9 +488,6 @@ namespace ZeroShotUdonUI.EditorTools
             layout.childControlHeight = false;
             layout.childForceExpandHeight = false;
             layout.spacing = StackSpacing;
-
-            SetLayoutWidth(rect, true);
-            return rect.gameObject;
         }
 
         /// <summary>
@@ -866,6 +890,197 @@ namespace ZeroShotUdonUI.EditorTools
 
             SetLayoutWidth(rect, true);
             return rect.gameObject;
+        }
+
+        private static GameObject BuildScrollArea()
+        {
+            RectTransform rect = CreateRect("ScrollArea", null, ScrollAreaSize);
+
+            // 表示する範囲。はみ出した部分は描かない。右端はスクロールバーの分を空ける。
+            RectTransform viewport = CreateRect(UIBuilder.ScrollViewportName, rect, Vector2.zero);
+            Stretch(viewport);
+            viewport.offsetMax = new Vector2(-(ScrollbarWidth + ScrollbarGap), 0f);
+            viewport.gameObject.AddComponent<RectMask2D>();
+
+            // 部品の無い場所でもつかんで動かせるよう、見えない当たり判定を置く。完全に透明なので、描画は省かれる。
+            Image hitArea = viewport.gameObject.AddComponent<Image>();
+            hitArea.color = Color.clear;
+            hitArea.raycastTarget = true;
+            viewport.GetComponent<CanvasRenderer>().cullTransparentMesh = true;
+
+            // 中身。上端を基準にして、中に置いた部品の分だけ下に伸びる。
+            RectTransform content = CreateRect(UIBuilder.ContentName, viewport, Vector2.zero);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = Vector2.zero;
+            AddStackLayout(content, true);
+
+            ContentSizeFitter fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            // 右端のスクロールバー。つまみの長さと位置は、uGUI の Scrollbar が決める。
+            RectTransform scrollbarRect = CreateRect("Scrollbar", rect, Vector2.zero);
+            scrollbarRect.anchorMin = new Vector2(1f, 0f);
+            scrollbarRect.anchorMax = new Vector2(1f, 1f);
+            scrollbarRect.pivot = new Vector2(1f, 0.5f);
+            scrollbarRect.anchoredPosition = Vector2.zero;
+            scrollbarRect.sizeDelta = new Vector2(ScrollbarWidth, 0f);
+            AddImage(scrollbarRect, GetMaterial(MaterialRole.Track), true);
+
+            RectTransform slidingArea = CreateRect("Sliding Area", scrollbarRect, Vector2.zero);
+            Stretch(slidingArea);
+
+            RectTransform handle = CreateRect("Handle", slidingArea, Vector2.zero);
+            Stretch(handle);
+            Image handleImage = AddImage(handle, GetMaterial(MaterialRole.Knob), true);
+
+            Scrollbar scrollbar = scrollbarRect.gameObject.AddComponent<Scrollbar>();
+            SetupSelectable(scrollbar, handleImage);
+            scrollbar.handleRect = handle;
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+
+            // 縦方向だけ動かす。端を越えては動かさない。中身が収まっているときは、スクロールバーを隠す。
+            ScrollRect scrollRect = rect.gameObject.AddComponent<ScrollRect>();
+            scrollRect.viewport = viewport;
+            scrollRect.content = content;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = ScrollSensitivity;
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+
+            SetLayoutWidth(rect, true);
+            return rect.gameObject;
+        }
+
+        /// <summary>
+        /// タブを作る。見出しは選択ボタン群、ページは縦の自動配置で、どちらも既存のプレハブを中に含める。
+        /// </summary>
+        private static GameObject BuildTabs()
+        {
+            RectTransform rect = CreateRect("Tabs", null, TabsSize);
+
+            // 見出し。上端に、幅いっぱいで置く。
+            GameObject header = InstantiateNested(PrefabKind.SegmentedControl, rect);
+            header.name = UIBuilder.TabsHeaderName;
+            RectTransform headerRect = (RectTransform)header.transform;
+            headerRect.anchorMin = new Vector2(0f, 1f);
+            headerRect.anchorMax = new Vector2(1f, 1f);
+            headerRect.pivot = new Vector2(0.5f, 1f);
+            headerRect.anchoredPosition = Vector2.zero;
+            headerRect.sizeDelta = new Vector2(0f, TabsHeaderHeight);
+            UIBuilder.RecordOverrides(header, headerRect);
+
+            TextMeshProUGUI[] headerLabels = header.GetComponentsInChildren<TextMeshProUGUI>(true);
+            for (int i = 0; i < headerLabels.Length; i++)
+            {
+                headerLabels[i].text = "Tab " + (i + 1);
+                UIBuilder.RecordOverrides(headerLabels[i]);
+            }
+
+            // ページを入れる場所。見出しの下の残り全部を使う。
+            RectTransform pages = CreateRect(UIBuilder.TabsPagesName, rect, Vector2.zero);
+            Stretch(pages);
+            pages.offsetMax = new Vector2(0f, -(TabsHeaderHeight + StackSpacing));
+
+            // ページは、見出しの選択肢と同じ2つで作る。最初のページだけを表示しておく。
+            for (int i = 0; i < 2; i++)
+            {
+                GameObject page = InstantiateNested(PrefabKind.StackVertical, pages);
+                page.name = UIBuilder.GetTabPageName(i);
+                RectTransform pageRect = (RectTransform)page.transform;
+                Stretch(pageRect);
+                page.SetActive(i == 0);
+                UIBuilder.RecordOverrides(page, pageRect);
+            }
+
+            TabView control = rect.gameObject.AddUdonSharpComponent<TabView>();
+            SerializedObject serializedControl = new SerializedObject(control);
+            serializedControl.FindProperty("header").objectReferenceValue = header.GetComponent<SegmentedControl>();
+            serializedControl.FindProperty("pageContainer").objectReferenceValue = pages;
+            serializedControl.ApplyModifiedPropertiesWithoutUndo();
+
+            // 見出しは、選択が変わったことをタブ自身に伝える。
+            UIBuilder.SetEvent(header.GetComponent<SegmentedControl>(), control, nameof(TabView._OnHeaderChanged));
+
+            SetLayoutWidth(rect, true);
+            return rect.gameObject;
+        }
+
+        /// <summary>
+        /// 確認ダイアログを作る。Canvas・パネル・メッセージ・ボタンは、既存のプレハブを中に含める形で組み立てる。
+        /// </summary>
+        private static GameObject BuildDialog()
+        {
+            // 開閉するスクリプトは、初期化（Start）が開閉に左右されないよう、常に有効な Canvas の親に置く。
+            GameObject root = new GameObject("Dialog");
+
+            GameObject canvas = InstantiateNested(PrefabKind.Canvas, root.transform);
+            canvas.name = UIBuilder.WindowCanvasName;
+            RectTransform canvasRect = (RectTransform)canvas.transform;
+            canvasRect.sizeDelta = DialogSize;
+            BoxCollider boxCollider = canvas.GetComponent<BoxCollider>();
+            boxCollider.size = new Vector3(DialogSize.x, DialogSize.y, boxCollider.size.z);
+
+            InstantiateNested(PrefabKind.Panel, canvas.transform);
+
+            // メッセージ。ボタンより上の領域に広げ、長い文は折り返す。
+            GameObject message = InstantiateNested(PrefabKind.LabelBody, canvas.transform);
+            message.name = UIBuilder.DialogMessageName;
+            RectTransform messageRect = (RectTransform)message.transform;
+            Stretch(messageRect);
+            messageRect.offsetMin = new Vector2(WindowPadding, WindowPadding + DialogButtonSize.y + WindowTitleGap);
+            messageRect.offsetMax = new Vector2(-WindowPadding, -WindowPadding);
+            TextMeshProUGUI messageText = message.GetComponent<TextMeshProUGUI>();
+            messageText.text = "Are you sure?";
+            messageText.enableWordWrapping = true;
+            messageText.alignment = TextAlignmentOptions.TopLeft;
+
+            // ボタンは右下に並べる。右が「はい」、その左が「いいえ」。
+            GameObject confirm = BuildDialogButton(canvas.transform, PrefabKind.ButtonPrimary, UIBuilder.DialogConfirmName, "OK", 0);
+            GameObject cancel = BuildDialogButton(canvas.transform, PrefabKind.ButtonOutline, UIBuilder.DialogCancelName, "Cancel", 1);
+
+            ConfirmDialog dialog = root.AddUdonSharpComponent<ConfirmDialog>();
+            SerializedObject serializedDialog = new SerializedObject(dialog);
+            serializedDialog.FindProperty("content").objectReferenceValue = canvas;
+            serializedDialog.FindProperty("messageLabel").objectReferenceValue = messageText;
+            serializedDialog.ApplyModifiedPropertiesWithoutUndo();
+
+            // ボタンは、押されたことをダイアログ自身に伝える。
+            UIBuilder.SetEvent(confirm.GetComponent<ButtonControl>(), dialog, nameof(ConfirmDialog._OnConfirm));
+            UIBuilder.SetEvent(cancel.GetComponent<ButtonControl>(), dialog, nameof(ConfirmDialog._OnCancel));
+
+            // 中に含めたプレハブへの変更は、記録しないとこのプレハブに保存されない。
+            UIBuilder.RecordOverrides(canvas, canvasRect, boxCollider, message, messageRect, messageText);
+
+            return root;
+        }
+
+        // ダイアログの右下に置くボタンを作る。indexFromRight は右から数えた順番（0 始まり）。
+        private static GameObject BuildDialogButton(Transform parent, PrefabKind kind, string name, string label, int indexFromRight)
+        {
+            GameObject button = InstantiateNested(kind, parent);
+            button.name = name;
+
+            RectTransform buttonRect = (RectTransform)button.transform;
+            buttonRect.anchorMin = new Vector2(1f, 0f);
+            buttonRect.anchorMax = new Vector2(1f, 0f);
+            buttonRect.pivot = new Vector2(1f, 0f);
+            buttonRect.anchoredPosition = new Vector2(
+                -(WindowPadding + indexFromRight * (DialogButtonSize.x + StackSpacing)), WindowPadding);
+            buttonRect.sizeDelta = DialogButtonSize;
+
+            TextMeshProUGUI text = button.GetComponentInChildren<TextMeshProUGUI>(true);
+            text.text = label;
+
+            // 中に含めたプレハブへの変更は、記録しないとこのプレハブに保存されない。
+            UIBuilder.RecordOverrides(button, buttonRect, text);
+
+            return button;
         }
 
         /// <summary>

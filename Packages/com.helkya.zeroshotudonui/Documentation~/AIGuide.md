@@ -18,7 +18,7 @@ UI を作るときに、必ず守ることです。`UIBuilder` を使えば、1 
 3. uGUI の `Button.onClick` などから直接呼べる処理は限られます。部品は、`UdonBehaviour.SendCustomEvent` を経由して Udon に操作を伝えます。
 4. 実行時のスクリプトは、UdonSharp（`UdonSharpBehaviour`）で書きます。通常の C# より、使える機能と API が少ないことに注意します。
 5. 一度も有効になっていないオブジェクトのスクリプトは、初期化（`Start`）と、VRChat が呼び出すイベント（`OnPlayerJoined` など）が実行されません。ほかのスクリプトからの呼び出しと、部品からの通知は受け取れます。操作を受け取るスクリプトは、常に有効なオブジェクトに付けます。ウィンドウの中には付けません。
-6. Canvas やウィンドウを、別の Canvas の中に置きません。縮尺が二重に掛かります。
+6. Canvas、ウィンドウ、確認ダイアログを、別の Canvas の中に置きません。縮尺が二重に掛かります。
 7. 部品は同期しません。操作の結果は、操作した本人にだけ反映されます。
 
 ## 作業の流れ
@@ -138,6 +138,9 @@ public static class SettingsUIBuilder
 | `WindowPanel CreateWindow(string name, string title, Vector2 size, out RectTransform content)` | タイトルと閉じるボタンのついたウィンドウを置く。部品は `content` の中に置く |
 | `GameObject CreatePanelCanvas(string name, Vector2 size, out RectTransform content)` | 背景のパネルつきの Canvas を置く。部品は `content` の中に置く |
 | `GameObject CreateCanvas(string name, Vector2 size)` | 空の Canvas を置く。背景も中身の領域も無い。自由に配置したいときに使う |
+| `ConfirmDialog CreateDialog(string name, string message, string confirmLabel, string cancelLabel, Vector2 size)` | 確認ダイアログを置く。独立した Canvas で、ワールドの開始時は閉じている。目安の大きさは 480 x 260 |
+| `RectTransform CreateScrollArea(Transform parent, out RectTransform content)` | スクロール領域を置く。部品は `content` の中に置く。枠からはみ出した分は、スクロールして見る |
+| `TabView CreateTabs(Transform parent, string[] titles, int selectedIndex, out RectTransform[] pages)` | タブを置く。見出しと同じ数のページが `pages` に入る。部品は各ページの中に置く |
 | `Image CreatePanel(Transform parent)` | 親いっぱいに広がる背景の板を置く |
 | `RectTransform CreateStack(Transform parent, StackDirection direction)` | 子を等間隔で並べる枠を置く。`Vertical` か `Horizontal` |
 | `RectTransform CreateSettingRow(Transform parent, string label, Component control)` | 左に項目名、右に操作部品を置く行を置く。`control` には作成済みの部品を渡す。`null` なら項目名だけの行になる |
@@ -166,8 +169,9 @@ public static class SettingsUIBuilder
 | 関数 | 内容 |
 |---|---|
 | `void SetEvent(ControlBase control, UdonSharpBehaviour target, string eventName)` | 部品が操作されたときの通知先と、呼び出すメソッドの名前を設定する。`target` に `UdonBehaviour` を取る形もある |
+| `void SetCancelEvent(ConfirmDialog dialog, string eventName)` | 確認ダイアログで「いいえ」が押されたときに呼び出すメソッドの名前を設定する。通知先は `SetEvent` と共通 |
 
-`ButtonControl`、`ToggleSwitch`、`CheckboxControl`、`SliderControl`、`StepperControl`、`SegmentedControl`、`WindowPanel` は、どれも `ControlBase` です。`ProgressBar` は操作できない部品なので、`ControlBase` ではなく、イベントも設定できません。
+`ButtonControl`、`ToggleSwitch`、`CheckboxControl`、`SliderControl`、`StepperControl`、`SegmentedControl`、`WindowPanel`、`TabView`、`ConfirmDialog` は、どれも `ControlBase` です。`ConfirmDialog` に `SetEvent` で設定するのは、「はい」が押されたときの通知です。`ProgressBar` は操作できない部品なので、`ControlBase` ではなく、イベントも設定できません。
 
 ### 位置と大きさ
 
@@ -184,10 +188,13 @@ public static class SettingsUIBuilder
 
 - 大きさと、Canvas の中での位置の単位は mm です。ワールド内での位置の単位は m です。
 - **基本は、`CreateWindow` か `CreatePanelCanvas` の `content` に、部品を順に置きます。** `content` は縦の自動配置なので、上から順に並びます。
-- 縦の自動配置の中では、ボタン、アイコンボタン、トグルスイッチ、数値ステッパー、アイコンは幅を保って左に寄ります。設定行、チェックボックス、スライダー、選択ボタン群、進捗バー、ラベル、自動配置は、幅いっぱいに広がります。
+- 縦の自動配置の中では、ボタン、アイコンボタン、トグルスイッチ、数値ステッパー、アイコンは幅を保って左に寄ります。設定行、チェックボックス、スライダー、選択ボタン群、進捗バー、ラベル、自動配置、タブ、スクロール領域は、幅いっぱいに広がります。
 - ボタンを横に並べたいときは、`CreateStack(content, StackDirection.Horizontal)` を置き、その中にボタンを置きます。
 - 「項目名 + 操作部品」の形にしたいときは、部品を作ってから `CreateSettingRow` に渡します。
-- `content` の高さを超えた部品は、下にはみ出します。スクロールはまだありません。ウィンドウの高さは、中身に合わせて決めます。目安は、設定行 1 つにつき 80（行の高さ 64 + 間隔 16）、それにタイトルと余白の分として 140 を足します。
+- `content` の高さを超えた部品は、下にはみ出します。ウィンドウの高さは、中身に合わせて決めます。目安は、設定行 1 つにつき 80（行の高さ 64 + 間隔 16）、それにタイトルと余白の分として 140 を足します。
+- 項目が多くて収まらないときは、`CreateScrollArea` を置き、その `content` に部品を置きます。スクロール領域の高さは、`SetSize` で決めます（幅は自動で広がるので、高さだけが効きます）。
+- 画面を分けたいときは、`CreateTabs` を置き、各ページに部品を置きます。タブの高さも `SetSize` で決めます。見出しの分として 64 を見込みます。
+- 確認ダイアログは、`CreateDialog` で作り、`PlaceInWorld` で関連する UI の 10cm ほど手前に置きます。開くボタンには `UIBuilder.SetEvent(button, dialog, nameof(ConfirmDialog.Open))` を設定します。
 - 自由に配置したいときは、`CreateCanvas` と `CreatePanel` で土台を作り、部品を Canvas の直下に置いて `Place` で位置を決めます。位置は、親の中央が原点、右と上が正です。
 - ツールキット以外のオブジェクトを縦の自動配置に入れると、幅が 0 になります。入れる場合は、`LayoutElement` を付けて幅を指定します。
 
@@ -204,6 +211,8 @@ UdonSharp のスクリプトから、部品の値を読み書きできます。�
 | `SegmentedControl` | `int SelectedIndex`、`int Count` | `SetValue(int)`、`SetValueWithoutNotify(int)` |
 | `ProgressBar` | `float Value`（0 から 1） | `SetValue(float)` |
 | `WindowPanel` | `bool IsOpen` | `Open()`、`Close()`、`ToggleOpen()` |
+| `TabView` | `int SelectedIndex`、`int Count` | `SetValue(int)`、`SetValueWithoutNotify(int)` |
+| `ConfirmDialog` | `bool IsOpen` | `Open()`、`Close()`、`SetMessage(string)` |
 
 - イベントは「変わった」ことだけを伝えます。値は、部品から読みます。
 - `SetValue` は、値が実際に変わったときだけ、通知先にイベントを送ります。`SetValueWithoutNotify` は送りません。初期化や、同期で受け取った値の反映に使います。
@@ -221,7 +230,7 @@ UdonSharp のスクリプトから、部品の値を読み書きできます。�
 |---|---|
 | `Packages/com.helkya.zeroshotudonui/` の中のファイルを書き換える | 更新で失われる。見た目を変えたいときは、置いた後の部品を書き換える |
 | ツールキットのマテリアルを直接書き換える | 更新で失われる。色は、利用者に `Tools > ZeroShot Udon UI > テーマ設定` で変えてもらう。テーマを変える関数は、まだ無い |
-| Canvas やウィンドウを、別の Canvas の子にする | 縮尺が二重に掛かり、見えなくなる |
+| Canvas、ウィンドウ、確認ダイアログを、別の Canvas の子にする | 縮尺が二重に掛かり、見えなくなる |
 | Canvas のレイヤーを `UI` にする | VRChat のメニューを開いている間しか操作できなくなる |
 | 操作を受け取るスクリプトを、ウィンドウの中に付ける | ウィンドウを最初に開くまで、スクリプトの `Start` が実行されない。ウィンドウの外の、常に有効なオブジェクトに付ける |
 | 再生中に `UIBuilder` の関数を呼ぶ | エディタで編集しているとき専用。`EnsureSetup` が案内を出して `false` を返す |
@@ -243,5 +252,4 @@ UdonSharp のスクリプトから、部品の値を読み書きできます。�
 次の部品と機能は、この版にはありません。必要な場合は、uGUI で自作するか、利用者に相談します。
 
 - ドロップダウン、テキスト入力
-- タブ、スクロール領域、確認ダイアログ
 - 同期、効果音、開閉などのアニメーション

@@ -15,10 +15,11 @@ namespace ZeroShotUdonUI.EditorTools
 
         // 番号が 11 以上離れると、メニューに区切り線が入る。
         private const int ContainerPriority = 10;
-        private const int ControlPriority = 26;
-        private const int LabelPriority = 48;
+        private const int ControlPriority = 30;
+        private const int LabelPriority = 52;
 
         private static readonly Vector2 DefaultCanvasSize = new Vector2(600f, 400f);
+        private static readonly Vector2 DefaultDialogSize = new Vector2(480f, 260f);
 
         [MenuItem(MenuRoot + "ウィンドウ", false, ContainerPriority)]
         private static void AddWindow(MenuCommand command)
@@ -63,6 +64,29 @@ namespace ZeroShotUdonUI.EditorTools
         private static void AddSettingRow(MenuCommand command)
         {
             AddElement(command, parent => UIBuilder.CreateSettingRow(parent, "Label", null), false);
+        }
+
+        [MenuItem(MenuRoot + "スクロール領域", false, ContainerPriority + 6)]
+        private static void AddScrollArea(MenuCommand command)
+        {
+            AddElement(command, parent => UIBuilder.CreateScrollArea(parent, out _), false);
+        }
+
+        [MenuItem(MenuRoot + "タブ", false, ContainerPriority + 7)]
+        private static void AddTabs(MenuCommand command)
+        {
+            AddElement(command, parent => UIBuilder.CreateTabs(parent, new[] { "Tab 1", "Tab 2" }, 0, out _), false);
+        }
+
+        [MenuItem(MenuRoot + "確認ダイアログ", false, ContainerPriority + 8)]
+        private static void AddDialog(MenuCommand command)
+        {
+            if (!UIBuilder.EnsureSetup())
+                return;
+
+            ConfirmDialog dialog = UIBuilder.CreateDialog("Dialog", "Are you sure?", "OK", "Cancel", DefaultDialogSize);
+            PlaceRoot(dialog.gameObject, command.context as GameObject);
+            Finish(dialog.gameObject, dialog.gameObject);
         }
 
         [MenuItem(MenuRoot + "ボタン（主）", false, ControlPriority)]
@@ -199,7 +223,7 @@ namespace ZeroShotUdonUI.EditorTools
             return canvas;
         }
 
-        // Canvas やウィンドウを、選択中のオブジェクトの子として置く。
+        // Canvas、ウィンドウ、確認ダイアログを、選択中のオブジェクトの子として置く。
         // 何も選んでいないか、選んでいるものが Canvas の中にある場合は、シーンの最上位に作ってシーンビューの注視点に置く。
         private static void PlaceRoot(GameObject root, GameObject context)
         {

@@ -79,6 +79,13 @@ namespace ZeroShotUdonUI.EditorTools
         internal const string CheckboxLabelName = "Label";
         internal const string StepperDecreaseName = "Decrease Button";
         internal const string StepperIncreaseName = "Increase Button";
+        internal const string ScrollViewportName = "Viewport";
+        internal const string TabsHeaderName = "Header";
+        internal const string TabsPagesName = "Pages";
+        internal const string DialogMessageName = "Message";
+        internal const string DialogConfirmName = "Confirm Button";
+        internal const string DialogCancelName = "Cancel Button";
+        private const string TabPageName = "Page";
         internal const string SettingRowLabelName = "Label";
         internal const string SettingRowSlotName = "Control";
         private const string SegmentName = "Segment";
@@ -179,7 +186,110 @@ namespace ZeroShotUdonUI.EditorTools
         }
 
         /// <summary>
-        /// target がウィンドウか、中身の領域を持つ Canvas なら、その中身の領域を返す。無ければ null を返す。
+        /// 確認ダイアログをシーンに置く。メッセージと、「はい」「いいえ」にあたる2つのボタンを持つ。
+        /// ワールドの開始時は閉じていて、戻り値の Open で開く。どちらかのボタンを押すと閉じる。
+        /// 「はい」が押されたときの通知は SetEvent、「いいえ」のときの通知は SetCancelEvent で設定する。
+        /// 独立した Canvas なので、PlaceInWorld などで置く場所を決める。
+        /// </summary>
+        public static ConfirmDialog CreateDialog(string name, string message, string confirmLabel, string cancelLabel, Vector2 size)
+        {
+            GameObject root = Instantiate(PrefabKind.Dialog, null);
+            root.name = name;
+
+            Transform canvas = root.transform.Find(WindowCanvasName);
+            RectTransform canvasRect = (RectTransform)canvas;
+            canvasRect.sizeDelta = size;
+
+            // 当たり判定を Canvas の大きさに合わせる。
+            BoxCollider boxCollider = canvas.GetComponent<BoxCollider>();
+            boxCollider.size = new Vector3(size.x, size.y, boxCollider.size.z);
+
+            TextMeshProUGUI messageText = canvas.Find(DialogMessageName).GetComponent<TextMeshProUGUI>();
+            messageText.text = message;
+
+            TextMeshProUGUI confirmText = canvas.Find(DialogConfirmName).GetComponentInChildren<TextMeshProUGUI>(true);
+            confirmText.text = confirmLabel;
+
+            TextMeshProUGUI cancelText = canvas.Find(DialogCancelName).GetComponentInChildren<TextMeshProUGUI>(true);
+            cancelText.text = cancelLabel;
+
+            RecordOverrides(root, canvasRect, boxCollider, messageText, confirmText, cancelText);
+            return root.GetComponent<ConfirmDialog>();
+        }
+
+        /// <summary>
+        /// 確認ダイアログで「いいえ」が押されたときに、通知先で呼び出すイベント名を設定する。
+        /// 通知先は、SetEvent で設定したものと共通。
+        /// </summary>
+        public static void SetCancelEvent(ConfirmDialog dialog, string eventName)
+        {
+            SerializedObject serializedDialog = new SerializedObject(dialog);
+            serializedDialog.FindProperty("cancelEventName").stringValue = eventName;
+            serializedDialog.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>
+        /// スクロール領域を置く。部品は content の中に置く。
+        /// content は縦の自動配置で、置いた部品の分だけ下に伸びる。枠からはみ出した分は、スクロールして見る。
+        /// </summary>
+        public static RectTransform CreateScrollArea(Transform parent, out RectTransform content)
+        {
+            GameObject instance = Instantiate(PrefabKind.ScrollArea, parent);
+            content = instance.GetComponent<ScrollRect>().content;
+            return (RectTransform)instance.transform;
+        }
+
+        /// <summary>
+        /// タブを置く。titles は左から順の見出しで、2つ以上必要。見出しと同じ数のページが作られ、pages に入る。
+        /// 各ページは縦の自動配置なので、置いた部品は上から順に並ぶ。
+        /// </summary>
+        public static TabView CreateTabs(Transform parent, string[] titles, int selectedIndex, out RectTransform[] pages)
+        {
+            if (titles == null || titles.Length < 2)
+                throw new System.ArgumentException("見出しは2つ以上必要です。", nameof(titles));
+            if (selectedIndex < 0 || selectedIndex >= titles.Length)
+                throw new System.ArgumentOutOfRangeException(nameof(selectedIndex));
+
+            GameObject instance = Instantiate(PrefabKind.Tabs, parent);
+            ConfigureSegmented(instance.transform.Find(TabsHeaderName).gameObject, titles, selectedIndex);
+
+            // プレハブのページは2つ。足りない分は、新しい縦の自動配置を足す。
+            Transform container = instance.transform.Find(TabsPagesName);
+            for (int i = container.childCount; i < titles.Length; i++)
+            {
+                GameObject added = Instantiate(PrefabKind.StackVertical, container);
+                added.name = GetTabPageName(i);
+
+                RectTransform addedRect = (RectTransform)added.transform;
+                addedRect.anchorMin = Vector2.zero;
+                addedRect.anchorMax = Vector2.one;
+                addedRect.offsetMin = Vector2.zero;
+                addedRect.offsetMax = Vector2.zero;
+                RecordOverrides(added, addedRect);
+            }
+
+            // 最初に見せるページだけを表示しておく。
+            pages = new RectTransform[titles.Length];
+            for (int i = 0; i < pages.Length; i++)
+            {
+                GameObject page = container.GetChild(i).gameObject;
+                page.SetActive(i == selectedIndex);
+                RecordOverrides(page);
+                pages[i] = (RectTransform)page.transform;
+            }
+
+            return instance.GetComponent<TabView>();
+        }
+
+        // タブのページのオブジェクト名。index は左からの順番（0 始まり）。
+        internal static string GetTabPageName(int index)
+        {
+            return TabPageName + " " + (index + 1);
+        }
+
+        /// <summary>
+        /// target が中身の領域を持つ容れ物（ウィンドウ、パネルつきの Canvas、スクロール領域、タブ）なら、その中身の領域を返す。
+        /// 無ければ null を返す。
         /// </summary>
         internal static Transform FindContent(GameObject target)
         {
@@ -188,6 +298,20 @@ namespace ZeroShotUdonUI.EditorTools
 
             if (target.GetComponent<Canvas>() != null)
                 return target.transform.Find(ContentName);
+
+            ScrollRect scrollRect = target.GetComponent<ScrollRect>();
+            if (scrollRect != null)
+                return scrollRect.content;
+
+            // タブは、表示しているページを中身の領域として扱う。
+            if (target.GetComponent<TabView>() != null)
+            {
+                foreach (Transform page in target.transform.Find(TabsPagesName))
+                {
+                    if (page.gameObject.activeSelf)
+                        return page;
+                }
+            }
 
             return null;
         }
@@ -573,6 +697,13 @@ namespace ZeroShotUdonUI.EditorTools
                 throw new System.ArgumentOutOfRangeException(nameof(selectedIndex));
 
             GameObject instance = Instantiate(PrefabKind.SegmentedControl, parent);
+            ConfigureSegmented(instance, options, selectedIndex);
+            return instance.GetComponent<SegmentedControl>();
+        }
+
+        // 配置済みの選択ボタン群に、選択肢の数・名前・最初の選択を設定する。
+        private static void ConfigureSegmented(GameObject instance, string[] options, int selectedIndex)
+        {
             SegmentedControl control = instance.GetComponent<SegmentedControl>();
 
             // プレハブの選択肢は2つ。足りない分は、選ばれていない末尾の選択肢を複製して増やす。
@@ -606,8 +737,6 @@ namespace ZeroShotUdonUI.EditorTools
 
                 RecordOverrides(toggle, background, text);
             }
-
-            return control;
         }
 
         /// <summary>
@@ -707,6 +836,8 @@ namespace ZeroShotUdonUI.EditorTools
                 typeof(CheckboxControl),
                 typeof(StepperControl),
                 typeof(ProgressBar),
+                typeof(TabView),
+                typeof(ConfirmDialog),
             };
             behaviours.AddRange(extraBehaviours);
 

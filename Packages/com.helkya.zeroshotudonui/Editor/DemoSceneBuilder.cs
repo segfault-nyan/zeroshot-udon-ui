@@ -27,6 +27,10 @@ namespace ZeroShotUdonUI.EditorTools
         private static readonly Vector3 GalleryPosition = new Vector3(-0.75f, 1.3f, 1.6f);
         private static readonly Vector3 SettingsPosition = new Vector3(0.65f, 1.3f, 1.6f);
 
+        // 設定ウィンドウのさらに右に、容れ物の見本を置く。確認ダイアログは、その少し手前に出す。
+        private static readonly Vector3 LayoutsPosition = new Vector3(1.5f, 1.3f, 0.9f);
+        private const float DialogForwardOffset = 0.12f;
+
         // Canvas 単位。1 単位 = 1mm。部品一覧は、見出しの下に幅 480 の列を2つ並べる。
         private static readonly Vector2 GallerySize = new Vector2(1080f, 1000f);
         private static readonly Vector2 GalleryTitlePosition = new Vector2(0f, 436f);
@@ -35,6 +39,11 @@ namespace ZeroShotUdonUI.EditorTools
         private static readonly Vector2 LeftColumnPosition = new Vector2(-260f, -36f);
         private static readonly Vector2 RightColumnPosition = new Vector2(260f, -36f);
         private static readonly Vector2 ButtonSize = new Vector2(148f, 56f);
+        private static readonly Vector2 LayoutsSize = new Vector2(600f, 900f);
+        private static readonly Vector2 TabsSize = new Vector2(520f, 300f);
+        private static readonly Vector2 ScrollAreaSize = new Vector2(520f, 200f);
+        private static readonly Vector2 DialogSize = new Vector2(480f, 260f);
+        private const int ScrollItemCount = 8;
 
         [MenuItem("Tools/ZeroShot Udon UI/デモシーンを生成")]
         private static void Generate()
@@ -73,6 +82,7 @@ namespace ZeroShotUdonUI.EditorTools
 
             BuildGallery(GalleryPosition, FaceSpawn(GalleryPosition));
             SampleBuilder.BuildSettingsSample(SettingsPosition, FaceSpawn(SettingsPosition));
+            BuildLayouts(LayoutsPosition, FaceSpawn(LayoutsPosition));
 
             PrefabGenerator.EnsureFolder(SceneFolder);
             if (!EditorSceneManager.SaveScene(scene, ScenePath))
@@ -82,6 +92,48 @@ namespace ZeroShotUdonUI.EditorTools
             }
 
             EditorUtility.DisplayDialog(UIBuilder.DisplayName, "デモシーンを生成しました。\n" + ScenePath, "OK");
+        }
+
+        /// <summary>
+        /// 容れ物（タブ、スクロール領域、確認ダイアログ）の見本を並べたパネルを作る。
+        /// </summary>
+        private static void BuildLayouts(Vector3 position, Quaternion rotation)
+        {
+            GameObject root = new GameObject("Layout Gallery");
+
+            GameObject canvas = UIBuilder.CreatePanelCanvas("Layouts", LayoutsSize, out RectTransform content);
+            canvas.transform.SetParent(root.transform, false);
+            UIBuilder.PlaceInWorld(canvas, position, rotation);
+
+            UIBuilder.CreateLabel(content, "Layouts", LabelStyle.Heading);
+
+            // タブ。ページごとに違う部品を置く。表示していないページの部品も、そのまま使える。
+            UIBuilder.CreateLabel(content, "Tabs", LabelStyle.Caption);
+            TabView tabs = UIBuilder.CreateTabs(content, new[] { "General", "Audio", "About" }, 0, out RectTransform[] pages);
+            UIBuilder.SetSize(tabs, TabsSize);
+
+            UIBuilder.CreateSettingRow(pages[0], "Notifications", UIBuilder.CreateToggle(pages[0], true));
+            UIBuilder.CreateSettingRow(pages[0], "Quality", UIBuilder.CreateStepper(pages[0], 1f, 5f, 1f, 3f));
+            UIBuilder.CreateSettingRow(pages[1], "Volume", UIBuilder.CreateSlider(pages[1], 0f, 1f, 0.5f));
+            UIBuilder.CreateCheckbox(pages[1], "Mute", false);
+            UIBuilder.CreateLabel(pages[2], "ZeroShot Udon UI", LabelStyle.Body);
+            UIBuilder.CreateLabel(pages[2], "A UI toolkit for VRChat worlds.", LabelStyle.Caption);
+
+            // スクロール領域。枠に収まらない数の項目を入れる。
+            UIBuilder.CreateLabel(content, "Scroll Area", LabelStyle.Caption);
+            RectTransform scrollArea = UIBuilder.CreateScrollArea(content, out RectTransform scrollContent);
+            UIBuilder.SetSize(scrollArea, ScrollAreaSize);
+            for (int i = 1; i <= ScrollItemCount; i++)
+                UIBuilder.CreateLabel(scrollContent, "Item " + i, LabelStyle.Body);
+
+            // 確認ダイアログ。パネルの少し手前に置き、ボタンで開く。通知先は設定しないので、ボタンを押すと閉じるだけ。
+            UIBuilder.CreateLabel(content, "Dialog", LabelStyle.Caption);
+            ButtonControl openButton = UIBuilder.CreateButton(content, "Open Dialog", ButtonStyle.Primary);
+
+            ConfirmDialog dialog = UIBuilder.CreateDialog("Sample Dialog", "Reset all settings to their defaults?", "Reset", "Cancel", DialogSize);
+            dialog.transform.SetParent(root.transform, false);
+            UIBuilder.PlaceInWorld(dialog.gameObject, position - rotation * Vector3.forward * DialogForwardOffset, rotation);
+            UIBuilder.SetEvent(openButton, dialog, nameof(ConfirmDialog.Open));
         }
 
         // 原点のスポーン地点から見て、展示が正面を向く向きを返す。
