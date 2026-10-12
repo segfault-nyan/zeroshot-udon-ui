@@ -61,7 +61,7 @@ MonoBehaviour:
       Data: 3|System.RuntimeType, mscorlib
     - Name: 
       Entry: 1
-      Data: ZeroShotUdonUI.ToggleSwitch, Assembly-CSharp
+      Data: ZeroShotUdonUI.ToggleSwitch, ZeroShotUdonUI.Runtime
     - Name: 
       Entry: 8
       Data: 
@@ -127,7 +127,7 @@ MonoBehaviour:
       Data: 8|System.RuntimeType, mscorlib
     - Name: 
       Entry: 1
-      Data: ZeroShotUdonUI.SliderControl, Assembly-CSharp
+      Data: ZeroShotUdonUI.SliderControl, ZeroShotUdonUI.Runtime
     - Name: 
       Entry: 8
       Data: 
@@ -187,7 +187,7 @@ MonoBehaviour:
       Data: 12|System.RuntimeType, mscorlib
     - Name: 
       Entry: 1
-      Data: ZeroShotUdonUI.SegmentedControl, Assembly-CSharp
+      Data: ZeroShotUdonUI.SegmentedControl, ZeroShotUdonUI.Runtime
     - Name: 
       Entry: 8
       Data: 

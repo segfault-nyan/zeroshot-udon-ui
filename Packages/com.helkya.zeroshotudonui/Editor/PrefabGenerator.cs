@@ -11,7 +11,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using VRC.Udon;
 
-// FND-04・FND-05・FND-08・LAY-01・LAY-03・LAY-04・CMP-01・CMP-03・CMP-04・CMP-06・CMP-11
+// FND-04・FND-05・FND-08・LAY-01・LAY-03・LAY-04・CMP-01・CMP-03・CMP-04・CMP-05・CMP-06・CMP-08・CMP-09・CMP-11
 namespace ZeroShotUdonUI.EditorTools
 {
     internal enum PrefabKind
@@ -31,9 +31,12 @@ namespace ZeroShotUdonUI.EditorTools
         LabelHeading,
         LabelBody,
         LabelCaption,
+        ProgressBar,
 
         // 他のプレハブを中に含むものは、含まれる側より後に並べる。この順番で生成するため。
         ButtonIcon,
+        Checkbox,
+        Stepper,
         Window,
     }
 
@@ -55,6 +58,7 @@ namespace ZeroShotUdonUI.EditorTools
         private const float SliderLabelGap = 10f;
         private const float StackSpacing = 16f;
         private const float SegmentSpacing = 8f;
+        private const float CheckboxLabelGap = 12f;
         private const float OutlineWidth = 2f;
         private const float WindowPadding = UIBuilder.ContentPadding;
         private const float WindowTitleTop = 28f;
@@ -73,6 +77,10 @@ namespace ZeroShotUdonUI.EditorTools
         private static readonly Vector2 IconSize = new Vector2(32f, 32f);
         private static readonly Vector2 IconButtonSize = new Vector2(48f, 48f);
         private static readonly Vector2 IconInButtonSize = new Vector2(24f, 24f);
+        private static readonly Vector2 CheckboxSize = new Vector2(300f, 40f);
+        private static readonly Vector2 CheckboxBoxSize = new Vector2(32f, 32f);
+        private static readonly Vector2 CheckboxCheckSize = new Vector2(20f, 20f);
+        private static readonly Vector2 StepperSize = new Vector2(200f, 48f);
 
         // マテリアルを新規作成するときの初期値。作成後はマテリアル側が正となり、ここを変えても反映されない。
         private static readonly Color SurfaceColor = new Color(0.09f, 0.10f, 0.13f, 0.96f);
@@ -199,6 +207,9 @@ namespace ZeroShotUdonUI.EditorTools
                 case PrefabKind.LabelHeading: return PrefabFolder + "/Components/ZS_Label_Heading.prefab";
                 case PrefabKind.LabelBody: return PrefabFolder + "/Components/ZS_Label_Body.prefab";
                 case PrefabKind.LabelCaption: return PrefabFolder + "/Components/ZS_Label_Caption.prefab";
+                case PrefabKind.ProgressBar: return PrefabFolder + "/Components/ZS_ProgressBar.prefab";
+                case PrefabKind.Checkbox: return PrefabFolder + "/Components/ZS_Checkbox.prefab";
+                case PrefabKind.Stepper: return PrefabFolder + "/Components/ZS_Stepper.prefab";
                 case PrefabKind.Window: return PrefabFolder + "/Layouts/ZS_Window.prefab";
                 default: throw new System.ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
@@ -224,6 +235,9 @@ namespace ZeroShotUdonUI.EditorTools
                 case PrefabKind.LabelHeading: return BuildLabelPrefab(36f, new Vector2(400f, 48f), TextColor, FontStyles.Bold);
                 case PrefabKind.LabelBody: return BuildLabelPrefab(24f, new Vector2(300f, 40f), TextColor, FontStyles.Normal);
                 case PrefabKind.LabelCaption: return BuildLabelPrefab(18f, new Vector2(300f, 28f), SubTextColor, FontStyles.Normal);
+                case PrefabKind.ProgressBar: return BuildProgressBar();
+                case PrefabKind.Checkbox: return BuildCheckbox();
+                case PrefabKind.Stepper: return BuildStepper();
                 case PrefabKind.Window: return BuildWindow();
                 default: throw new System.ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
@@ -527,6 +541,7 @@ namespace ZeroShotUdonUI.EditorTools
                 Image background = AddImage(segment, isSelected ? selectedMaterial : unselectedMaterial, true);
 
                 TextMeshProUGUI label = BuildLabel(segment, "Option " + (i + 1), 20f, Vector2.zero, TextColor, FontStyles.Bold);
+                label.gameObject.name = UIBuilder.GetSegmentLabelName(i);
                 label.alignment = TextAlignmentOptions.Center;
                 Stretch(label.rectTransform);
 
@@ -649,7 +664,7 @@ namespace ZeroShotUdonUI.EditorTools
             Image handleImage = AddImage(handle, GetMaterial(MaterialRole.Knob), true);
 
             TextMeshProUGUI valueLabel = BuildLabel(rect, "", 24f, Vector2.zero, TextColor, FontStyles.Normal);
-            valueLabel.gameObject.name = UIBuilder.SliderValueLabelName;
+            valueLabel.gameObject.name = UIBuilder.ValueLabelName;
             valueLabel.alignment = TextAlignmentOptions.Right;
             RectTransform labelRect = valueLabel.rectTransform;
             labelRect.anchorMin = new Vector2(1f, 0f);
@@ -678,6 +693,176 @@ namespace ZeroShotUdonUI.EditorTools
             valueLabel.text = slider.value.ToString(valueFormat, CultureInfo.InvariantCulture);
 
             AddInternalListener(slider.onValueChanged, control, nameof(SliderControl._OnSliderValueChanged));
+
+            SetLayoutWidth(rect, true);
+            return rect.gameObject;
+        }
+
+        private static GameObject BuildCheckbox()
+        {
+            Material onMaterial = GetMaterial(MaterialRole.Accent);
+            Material offMaterial = GetMaterial(MaterialRole.Track);
+
+            RectTransform rect = CreateRect("Checkbox", null, CheckboxSize);
+
+            // 左端の丸い枠。幅と高さが同じなので、ピル形状のマテリアルで円になる。
+            RectTransform box = CreateRect(UIBuilder.CheckboxBoxName, rect, CheckboxBoxSize);
+            box.anchorMin = new Vector2(0f, 0.5f);
+            box.anchorMax = new Vector2(0f, 0.5f);
+            box.pivot = new Vector2(0f, 0.5f);
+            box.anchoredPosition = Vector2.zero;
+            Image boxImage = AddImage(box, offMaterial, false);
+
+            // チェックのアイコン。オンのときだけ表示する。
+            GameObject check = InstantiateNested(PrefabKind.Icon, box);
+            check.name = UIBuilder.CheckboxCheckName;
+            RectTransform checkRect = (RectTransform)check.transform;
+            checkRect.sizeDelta = CheckboxCheckSize;
+            RawImage checkImage = check.GetComponent<RawImage>();
+            checkImage.color = Color.white;
+            UIBuilder.SetIcon(checkImage, IconType.Check);
+            check.SetActive(false);
+
+            // 項目名は全体に広げ、枠の右から書き始める。項目名の範囲がそのまま押せる範囲になる。
+            TextMeshProUGUI label = BuildLabel(rect, "Checkbox", 24f, Vector2.zero, TextColor, FontStyles.Normal);
+            label.gameObject.name = UIBuilder.CheckboxLabelName;
+            Stretch(label.rectTransform);
+            label.margin = new Vector4(CheckboxBoxSize.x + CheckboxLabelGap, 0f, 0f, 0f);
+            label.raycastTarget = true;
+
+            // 見た目の切り替えは CheckboxControl が行うので、標準のチェックマークは使わない。
+            Toggle toggle = rect.gameObject.AddComponent<Toggle>();
+            SetupSelectable(toggle, boxImage);
+            toggle.isOn = false;
+
+            CheckboxControl control = rect.gameObject.AddUdonSharpComponent<CheckboxControl>();
+            SerializedObject serializedControl = new SerializedObject(control);
+            serializedControl.FindProperty("toggle").objectReferenceValue = toggle;
+            serializedControl.FindProperty("box").objectReferenceValue = boxImage;
+            serializedControl.FindProperty("checkmark").objectReferenceValue = check;
+            serializedControl.FindProperty("onMaterial").objectReferenceValue = onMaterial;
+            serializedControl.FindProperty("offMaterial").objectReferenceValue = offMaterial;
+            serializedControl.ApplyModifiedPropertiesWithoutUndo();
+
+            AddInternalListener(toggle.onValueChanged, control, nameof(CheckboxControl._OnToggleValueChanged));
+
+            SetLayoutWidth(rect, true);
+
+            // 中に含めたプレハブへの変更は、記録しないとこのプレハブに保存されない。
+            UIBuilder.RecordOverrides(check, checkRect, checkImage);
+
+            return rect.gameObject;
+        }
+
+        private static GameObject BuildStepper()
+        {
+            RectTransform rect = CreateRect("Stepper", null, StepperSize);
+
+            // 左端に－、右端に＋のボタンを置き、その間に現在値を表示する。
+            GameObject decrease = BuildStepperButton(rect, UIBuilder.StepperDecreaseName, 0f, IconType.Minus);
+            GameObject increase = BuildStepperButton(rect, UIBuilder.StepperIncreaseName, 1f, IconType.Plus);
+
+            TextMeshProUGUI valueLabel = BuildLabel(rect, "", 24f, Vector2.zero, TextColor, FontStyles.Normal);
+            valueLabel.gameObject.name = UIBuilder.ValueLabelName;
+            valueLabel.alignment = TextAlignmentOptions.Center;
+            Stretch(valueLabel.rectTransform);
+            valueLabel.rectTransform.offsetMin = new Vector2(StepperSize.y, 0f);
+            valueLabel.rectTransform.offsetMax = new Vector2(-StepperSize.y, 0f);
+
+            StepperControl control = rect.gameObject.AddUdonSharpComponent<StepperControl>();
+            SerializedObject serializedControl = new SerializedObject(control);
+            serializedControl.FindProperty("valueLabel").objectReferenceValue = valueLabel;
+            serializedControl.FindProperty("decreaseButton").objectReferenceValue = decrease.GetComponent<Button>();
+            serializedControl.FindProperty("increaseButton").objectReferenceValue = increase.GetComponent<Button>();
+            serializedControl.ApplyModifiedPropertiesWithoutUndo();
+
+            // ボタンは、押されたことをステッパー自身に伝える。
+            UIBuilder.SetEvent(decrease.GetComponent<ButtonControl>(), control, nameof(StepperControl._OnDecrease));
+            UIBuilder.SetEvent(increase.GetComponent<ButtonControl>(), control, nameof(StepperControl._OnIncrease));
+
+            UIBuilder.RefreshStepper(control);
+
+            SetLayoutWidth(rect, false);
+            return rect.gameObject;
+        }
+
+        // ステッパーの端に置くアイコンボタンを作る。side は 0 で左端、1 で右端。
+        private static GameObject BuildStepperButton(RectTransform parent, string name, float side, IconType icon)
+        {
+            GameObject button = InstantiateNested(PrefabKind.ButtonIcon, parent);
+            button.name = name;
+
+            RectTransform buttonRect = (RectTransform)button.transform;
+            buttonRect.anchorMin = new Vector2(side, 0.5f);
+            buttonRect.anchorMax = new Vector2(side, 0.5f);
+            buttonRect.pivot = new Vector2(side, 0.5f);
+            buttonRect.anchoredPosition = Vector2.zero;
+            buttonRect.sizeDelta = new Vector2(StepperSize.y, StepperSize.y);
+
+            RawImage iconImage = button.GetComponentInChildren<RawImage>(true);
+            UIBuilder.SetIcon(iconImage, icon);
+
+            // 中に含めたプレハブへの変更は、記録しないとこのプレハブに保存されない。
+            UIBuilder.RecordOverrides(button, buttonRect, iconImage);
+
+            return button;
+        }
+
+        private static GameObject BuildProgressBar()
+        {
+            RectTransform rect = CreateRect("ProgressBar", null, SliderSize);
+
+            // スライダーからつまみを除いた形。右端を現在値の表示に使い、残りをバーにする。
+            RectTransform bar = CreateRect("Bar", rect, Vector2.zero);
+            Stretch(bar);
+            bar.offsetMax = new Vector2(-(SliderLabelWidth + SliderLabelGap), 0f);
+
+            // 操作できない部品なので、当たり判定は持たせない。レーザーを遮らない。
+            RectTransform background = CreateRect("Background", bar, Vector2.zero);
+            SetHorizontalBar(background, SliderTrackHeight);
+            AddImage(background, GetMaterial(MaterialRole.Track), false);
+
+            // 値が 0 に近いときも形が崩れないよう、塗りの最小の幅をバーの高さと同じにする。
+            // 塗りの可動域を左右に高さの半分ずつ狭め、その分だけ塗りの幅を広げておく。
+            RectTransform fillArea = CreateRect("Fill Area", bar, Vector2.zero);
+            SetHorizontalBar(fillArea, SliderTrackHeight);
+            fillArea.sizeDelta = new Vector2(-SliderTrackHeight, SliderTrackHeight);
+
+            RectTransform fill = CreateRect("Fill", fillArea, Vector2.zero);
+            Stretch(fill);
+            fill.sizeDelta = new Vector2(SliderTrackHeight, 0f);
+            AddImage(fill, GetMaterial(MaterialRole.Accent), false);
+
+            TextMeshProUGUI valueLabel = BuildLabel(rect, "", 24f, Vector2.zero, TextColor, FontStyles.Normal);
+            valueLabel.gameObject.name = UIBuilder.ValueLabelName;
+            valueLabel.alignment = TextAlignmentOptions.Right;
+            RectTransform labelRect = valueLabel.rectTransform;
+            labelRect.anchorMin = new Vector2(1f, 0f);
+            labelRect.anchorMax = new Vector2(1f, 1f);
+            labelRect.pivot = new Vector2(1f, 0.5f);
+            labelRect.anchoredPosition = Vector2.zero;
+            labelRect.sizeDelta = new Vector2(SliderLabelWidth, 0f);
+
+            // 塗りの長さの計算に、uGUI の Slider を使う。操作は受け付けない。
+            Slider slider = rect.gameObject.AddComponent<Slider>();
+            slider.interactable = false;
+            slider.transition = Selectable.Transition.None;
+            slider.navigation = new Navigation { mode = Navigation.Mode.None };
+            slider.fillRect = fill;
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.value = 0.5f;
+
+            ProgressBar control = rect.gameObject.AddUdonSharpComponent<ProgressBar>();
+            SerializedObject serializedControl = new SerializedObject(control);
+            serializedControl.FindProperty("slider").objectReferenceValue = slider;
+            serializedControl.FindProperty("valueLabel").objectReferenceValue = valueLabel;
+            string valueFormat = serializedControl.FindProperty("valueFormat").stringValue;
+            serializedControl.ApplyModifiedPropertiesWithoutUndo();
+
+            // 再生前のエディタ上でも現在値が見えるようにしておく。再生後は ProgressBar が更新する。
+            valueLabel.text = slider.value.ToString(valueFormat, CultureInfo.InvariantCulture);
 
             SetLayoutWidth(rect, true);
             return rect.gameObject;

@@ -73,10 +73,16 @@ namespace ZeroShotUdonUI.EditorTools
         internal const string ShaderName = "ZeroShotUdonUI/RoundedRect";
         internal const string IconShaderName = "ZeroShotUdonUI/Icon";
         // プレハブ内のオブジェクト名。配置後に名前で探すので、生成側と配置側で共有する。
-        internal const string SliderValueLabelName = "Value Label";
+        internal const string ValueLabelName = "Value Label";
+        internal const string CheckboxBoxName = "Box";
+        internal const string CheckboxCheckName = "Check";
+        internal const string CheckboxLabelName = "Label";
+        internal const string StepperDecreaseName = "Decrease Button";
+        internal const string StepperIncreaseName = "Increase Button";
         internal const string SettingRowLabelName = "Label";
         internal const string SettingRowSlotName = "Control";
         private const string SegmentName = "Segment";
+        private const string SegmentLabelName = "Label";
         internal const string IconName = "Icon";
         internal const string WindowCanvasName = "Canvas";
         internal const string WindowTitleName = "Title";
@@ -404,7 +410,138 @@ namespace ZeroShotUdonUI.EditorTools
             slider.SetValueWithoutNotify(value);
 
             // 再生前のエディタ上でも現在値が見えるようにしておく。再生後は SliderControl が更新する。
-            TextMeshProUGUI valueLabel = instance.transform.Find(SliderValueLabelName).GetComponent<TextMeshProUGUI>();
+            TextMeshProUGUI valueLabel = instance.transform.Find(ValueLabelName).GetComponent<TextMeshProUGUI>();
+            string valueFormat = new SerializedObject(control).FindProperty("valueFormat").stringValue;
+            valueLabel.text = slider.value.ToString(valueFormat, CultureInfo.InvariantCulture);
+
+            RecordOverrides(slider, valueLabel);
+            return control;
+        }
+
+        /// <summary>
+        /// チェックボックスを置く。枠の右に項目名がつく。
+        /// </summary>
+        public static CheckboxControl CreateCheckbox(Transform parent, string label, bool isOn)
+        {
+            GameObject instance = Instantiate(PrefabKind.Checkbox, parent);
+            CheckboxControl control = instance.GetComponent<CheckboxControl>();
+
+            TextMeshProUGUI text = instance.transform.Find(CheckboxLabelName).GetComponent<TextMeshProUGUI>();
+            text.text = label;
+            RecordOverrides(text);
+
+            // プレハブはオフの状態で作られている。オンで始める場合は、再生前の見た目も合わせておく。
+            if (isOn)
+            {
+                Toggle toggle = instance.GetComponent<Toggle>();
+                Image box = instance.transform.Find(CheckboxBoxName).GetComponent<Image>();
+                GameObject check = box.transform.Find(CheckboxCheckName).gameObject;
+
+                toggle.SetIsOnWithoutNotify(true);
+                box.material = (Material)new SerializedObject(control).FindProperty("onMaterial").objectReferenceValue;
+                check.SetActive(true);
+                RecordOverrides(toggle, box, check);
+            }
+
+            return control;
+        }
+
+        /// <summary>
+        /// 数値ステッパーを置く。＋と－のボタンで、値を step ずつ増減する。
+        /// 値は、minValue から数えて step の倍数に丸められる。step に小数を指定すると、表示も小数になる。
+        /// </summary>
+        public static StepperControl CreateStepper(Transform parent, float minValue, float maxValue, float step, float value)
+        {
+            if (maxValue < minValue)
+                throw new System.ArgumentException("最大値は、最小値以上にしてください。", nameof(maxValue));
+            if (step <= 0f)
+                throw new System.ArgumentException("増減の幅は、0 より大きくしてください。", nameof(step));
+
+            GameObject instance = Instantiate(PrefabKind.Stepper, parent);
+            StepperControl control = instance.GetComponent<StepperControl>();
+
+            SerializedObject serializedControl = new SerializedObject(control);
+            serializedControl.FindProperty("minValue").floatValue = minValue;
+            serializedControl.FindProperty("maxValue").floatValue = maxValue;
+            serializedControl.FindProperty("step").floatValue = step;
+            serializedControl.FindProperty("currentValue").floatValue = value;
+            serializedControl.FindProperty("valueFormat").stringValue = GetStepperFormat(step);
+            serializedControl.ApplyModifiedPropertiesWithoutUndo();
+
+            RefreshStepper(control);
+            return control;
+        }
+
+        /// <summary>
+        /// 再生前のエディタ上でも、ステッパーの現在値の表示とボタンの状態が設定値と合うようにする。再生後は StepperControl が更新する。
+        /// </summary>
+        internal static void RefreshStepper(StepperControl control)
+        {
+            SerializedObject serializedControl = new SerializedObject(control);
+            float minValue = serializedControl.FindProperty("minValue").floatValue;
+            float maxValue = serializedControl.FindProperty("maxValue").floatValue;
+            float step = serializedControl.FindProperty("step").floatValue;
+            float value = SnapStepperValue(serializedControl.FindProperty("currentValue").floatValue, minValue, maxValue, step);
+
+            serializedControl.FindProperty("currentValue").floatValue = value;
+            serializedControl.ApplyModifiedPropertiesWithoutUndo();
+
+            TextMeshProUGUI valueLabel = (TextMeshProUGUI)serializedControl.FindProperty("valueLabel").objectReferenceValue;
+            Button decreaseButton = (Button)serializedControl.FindProperty("decreaseButton").objectReferenceValue;
+            Button increaseButton = (Button)serializedControl.FindProperty("increaseButton").objectReferenceValue;
+
+            valueLabel.text = value.ToString(serializedControl.FindProperty("valueFormat").stringValue, CultureInfo.InvariantCulture);
+            decreaseButton.interactable = SnapStepperValue(value - step, minValue, maxValue, step) != value;
+            increaseButton.interactable = SnapStepperValue(value + step, minValue, maxValue, step) != value;
+            RecordOverrides(valueLabel, decreaseButton, increaseButton);
+        }
+
+        // StepperControl の丸め方と同じ計算。変えるときは両方を直す。
+        private static float SnapStepperValue(float target, float minValue, float maxValue, float step)
+        {
+            target = Mathf.Clamp(target, minValue, maxValue);
+            if (step <= 0f)
+                return target;
+
+            float snapped = minValue + Mathf.Round((target - minValue) / step) * step;
+            if (snapped > maxValue + step * 0.001f)
+                snapped -= step;
+
+            return Mathf.Min(snapped, maxValue);
+        }
+
+        // 増減の幅を表せる最小の桁数で表示する。1 なら "0"、0.5 なら "0.0"、0.25 なら "0.00"。
+        private static string GetStepperFormat(float step)
+        {
+            const int MaxDecimals = 3;
+
+            string format = "0";
+            float scaled = step;
+            for (int decimals = 0; decimals < MaxDecimals; decimals++)
+            {
+                if (Mathf.Abs(scaled - Mathf.Round(scaled)) < 0.0001f)
+                    break;
+
+                format += decimals == 0 ? ".0" : "0";
+                scaled *= 10f;
+            }
+
+            return format;
+        }
+
+        /// <summary>
+        /// 進捗バーを置く。value は 0 から 1。右端に現在値の表示がつく。操作はできない。
+        /// </summary>
+        public static ProgressBar CreateProgressBar(Transform parent, float value)
+        {
+            GameObject instance = Instantiate(PrefabKind.ProgressBar, parent);
+            ProgressBar control = instance.GetComponent<ProgressBar>();
+
+            Slider slider = instance.GetComponent<Slider>();
+            slider.SetValueWithoutNotify(value);
+
+            // 再生前のエディタ上でも現在値が見えるようにしておく。再生後は ProgressBar が更新する。
+            TextMeshProUGUI valueLabel = instance.transform.Find(ValueLabelName).GetComponent<TextMeshProUGUI>();
             string valueFormat = new SerializedObject(control).FindProperty("valueFormat").stringValue;
             valueLabel.text = slider.value.ToString(valueFormat, CultureInfo.InvariantCulture);
 
@@ -413,10 +550,16 @@ namespace ZeroShotUdonUI.EditorTools
         }
 
         // 選択肢のオブジェクト名。index は左からの順番（0 始まり）。
-        // 同じ親の下に同じ名前が並ぶと、プレハブを作り直したときに配置済みの UI との対応が崩れるので、連番を付ける。
+        // プレハブの中に同じ名前のオブジェクトが複数あると、プレハブを作り直したときに配置済みの UI との対応が崩れる。
+        // 親が違っていても崩れるので、選択肢にも、その中の文字にも連番を付ける。
         internal static string GetSegmentName(int index)
         {
             return SegmentName + " " + (index + 1);
+        }
+
+        internal static string GetSegmentLabelName(int index)
+        {
+            return SegmentLabelName + " " + (index + 1);
         }
 
         /// <summary>
@@ -438,6 +581,7 @@ namespace ZeroShotUdonUI.EditorTools
             {
                 Toggle added = Object.Instantiate(toggles[toggles.Length - 1], instance.transform);
                 added.gameObject.name = GetSegmentName(i);
+                added.GetComponentInChildren<TextMeshProUGUI>(true).gameObject.name = GetSegmentLabelName(i);
             }
             toggles = instance.GetComponentsInChildren<Toggle>(true);
 
@@ -560,6 +704,9 @@ namespace ZeroShotUdonUI.EditorTools
                 typeof(SliderControl),
                 typeof(SegmentedControl),
                 typeof(WindowPanel),
+                typeof(CheckboxControl),
+                typeof(StepperControl),
+                typeof(ProgressBar),
             };
             behaviours.AddRange(extraBehaviours);
 

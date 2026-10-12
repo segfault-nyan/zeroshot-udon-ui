@@ -28,10 +28,10 @@ namespace ZeroShotUdonUI.EditorTools
         private static readonly Vector3 SettingsPosition = new Vector3(0.65f, 1.3f, 1.6f);
 
         // Canvas 単位。1 単位 = 1mm。部品一覧は、見出しの下に幅 480 の列を2つ並べる。
-        private static readonly Vector2 GallerySize = new Vector2(1080f, 800f);
-        private static readonly Vector2 GalleryTitlePosition = new Vector2(0f, 336f);
+        private static readonly Vector2 GallerySize = new Vector2(1080f, 1000f);
+        private static readonly Vector2 GalleryTitlePosition = new Vector2(0f, 436f);
         private static readonly Vector2 GalleryTitleSize = new Vector2(1000f, 48f);
-        private static readonly Vector2 ColumnSize = new Vector2(480f, 648f);
+        private static readonly Vector2 ColumnSize = new Vector2(480f, 848f);
         private static readonly Vector2 LeftColumnPosition = new Vector2(-260f, -36f);
         private static readonly Vector2 RightColumnPosition = new Vector2(260f, -36f);
         private static readonly Vector2 ButtonSize = new Vector2(148f, 56f);
@@ -141,9 +141,19 @@ namespace ZeroShotUdonUI.EditorTools
             UIBuilder.CreateIconButton(iconButtons, IconType.Menu);
             UIBuilder.CreateIconButton(iconButtons, IconType.Close);
 
+            UIBuilder.CreateLabel(left, "Stepper", LabelStyle.Caption);
+            UIBuilder.CreateStepper(left, 0f, 10f, 1f, 3f);
+
+            UIBuilder.CreateLabel(left, "Progress Bar", LabelStyle.Caption);
+            UIBuilder.CreateProgressBar(left, 0.6f);
+
             UIBuilder.CreateLabel(right, "Setting Row", LabelStyle.Caption);
             ToggleSwitch rowToggle = UIBuilder.CreateToggle(right, true);
             UIBuilder.CreateSettingRow(right, "Label", rowToggle);
+
+            UIBuilder.CreateLabel(right, "Checkbox", LabelStyle.Caption);
+            UIBuilder.CreateCheckbox(right, "Unchecked", false);
+            UIBuilder.CreateCheckbox(right, "Checked", true);
 
             UIBuilder.CreateLabel(right, "Labels", LabelStyle.Caption);
             UIBuilder.CreateLabel(right, "Heading", LabelStyle.Heading);

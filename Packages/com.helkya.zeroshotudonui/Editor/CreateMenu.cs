@@ -16,7 +16,7 @@ namespace ZeroShotUdonUI.EditorTools
         // 番号が 11 以上離れると、メニューに区切り線が入る。
         private const int ContainerPriority = 10;
         private const int ControlPriority = 26;
-        private const int LabelPriority = 44;
+        private const int LabelPriority = 48;
 
         private static readonly Vector2 DefaultCanvasSize = new Vector2(600f, 400f);
 
@@ -105,6 +105,24 @@ namespace ZeroShotUdonUI.EditorTools
         private static void AddIconButton(MenuCommand command)
         {
             AddElement(command, parent => UIBuilder.CreateIconButton(parent, IconType.Info), true);
+        }
+
+        [MenuItem(MenuRoot + "チェックボックス", false, ControlPriority + 7)]
+        private static void AddCheckbox(MenuCommand command)
+        {
+            AddElement(command, parent => UIBuilder.CreateCheckbox(parent, "Checkbox", false), true);
+        }
+
+        [MenuItem(MenuRoot + "数値ステッパー", false, ControlPriority + 8)]
+        private static void AddStepper(MenuCommand command)
+        {
+            AddElement(command, parent => UIBuilder.CreateStepper(parent, 0f, 10f, 1f, 0f), true);
+        }
+
+        [MenuItem(MenuRoot + "進捗バー", false, LabelPriority + 4)]
+        private static void AddProgressBar(MenuCommand command)
+        {
+            AddElement(command, parent => UIBuilder.CreateProgressBar(parent, 0.5f), false);
         }
 
         [MenuItem(MenuRoot + "アイコン", false, LabelPriority + 3)]

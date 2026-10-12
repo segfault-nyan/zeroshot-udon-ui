@@ -150,8 +150,11 @@ public static class SettingsUIBuilder
 | `ButtonControl CreateButton(Transform parent, string label, ButtonStyle style)` | ボタンを置く。`Primary`（主）、`Secondary`（副）、`Outline`（枠線のみ） |
 | `ButtonControl CreateIconButton(Transform parent, IconType icon)` | アイコンだけの丸いボタンを置く |
 | `ToggleSwitch CreateToggle(Transform parent, bool isOn)` | トグルスイッチを置く |
+| `CheckboxControl CreateCheckbox(Transform parent, string label, bool isOn)` | チェックボックスを置く。枠の右に項目名がつく |
 | `SliderControl CreateSlider(Transform parent, float minValue, float maxValue, float value)` | スライダーを置く。右端に現在値の表示がつく |
+| `StepperControl CreateStepper(Transform parent, float minValue, float maxValue, float step, float value)` | 数値ステッパーを置く。＋と－のボタンで、値を `step` ずつ増減する。`step` が小数なら、表示も小数になる |
 | `SegmentedControl CreateSegmented(Transform parent, string[] options, int selectedIndex)` | 選択ボタン群を置く。`options` は 2 つ以上 |
+| `ProgressBar CreateProgressBar(Transform parent, float value)` | 進捗バーを置く。`value` は 0 から 1。操作はできない |
 | `TextMeshProUGUI CreateLabel(Transform parent, string text, LabelStyle style)` | ラベルを置く。`Heading`（見出し）、`Body`（本文）、`Caption`（補足） |
 | `RawImage CreateIcon(Transform parent, IconType icon)` | アイコンを置く |
 | `void SetIcon(RawImage image, IconType icon)` | アイコンの種類を変える |
@@ -164,7 +167,7 @@ public static class SettingsUIBuilder
 |---|---|
 | `void SetEvent(ControlBase control, UdonSharpBehaviour target, string eventName)` | 部品が操作されたときの通知先と、呼び出すメソッドの名前を設定する。`target` に `UdonBehaviour` を取る形もある |
 
-`ButtonControl`、`ToggleSwitch`、`SliderControl`、`SegmentedControl`、`WindowPanel` は、どれも `ControlBase` です。
+`ButtonControl`、`ToggleSwitch`、`CheckboxControl`、`SliderControl`、`StepperControl`、`SegmentedControl`、`WindowPanel` は、どれも `ControlBase` です。`ProgressBar` は操作できない部品なので、`ControlBase` ではなく、イベントも設定できません。
 
 ### 位置と大きさ
 
@@ -181,7 +184,7 @@ public static class SettingsUIBuilder
 
 - 大きさと、Canvas の中での位置の単位は mm です。ワールド内での位置の単位は m です。
 - **基本は、`CreateWindow` か `CreatePanelCanvas` の `content` に、部品を順に置きます。** `content` は縦の自動配置なので、上から順に並びます。
-- 縦の自動配置の中では、ボタン、アイコンボタン、トグルスイッチ、アイコンは幅を保って左に寄ります。設定行、スライダー、選択ボタン群、ラベル、自動配置は、幅いっぱいに広がります。
+- 縦の自動配置の中では、ボタン、アイコンボタン、トグルスイッチ、数値ステッパー、アイコンは幅を保って左に寄ります。設定行、チェックボックス、スライダー、選択ボタン群、進捗バー、ラベル、自動配置は、幅いっぱいに広がります。
 - ボタンを横に並べたいときは、`CreateStack(content, StackDirection.Horizontal)` を置き、その中にボタンを置きます。
 - 「項目名 + 操作部品」の形にしたいときは、部品を作ってから `CreateSettingRow` に渡します。
 - `content` の高さを超えた部品は、下にはみ出します。スクロールはまだありません。ウィンドウの高さは、中身に合わせて決めます。目安は、設定行 1 つにつき 80（行の高さ 64 + 間隔 16）、それにタイトルと余白の分として 140 を足します。
@@ -195,14 +198,19 @@ UdonSharp のスクリプトから、部品の値を読み書きできます。�
 | 部品 | 読む | 変える |
 |---|---|---|
 | `ToggleSwitch` | `bool IsOn` | `SetValue(bool)`、`SetValueWithoutNotify(bool)` |
+| `CheckboxControl` | `bool IsOn` | `SetValue(bool)`、`SetValueWithoutNotify(bool)` |
 | `SliderControl` | `float Value` | `SetValue(float)`、`SetValueWithoutNotify(float)` |
+| `StepperControl` | `float Value` | `SetValue(float)`、`SetValueWithoutNotify(float)` |
 | `SegmentedControl` | `int SelectedIndex`、`int Count` | `SetValue(int)`、`SetValueWithoutNotify(int)` |
+| `ProgressBar` | `float Value`（0 から 1） | `SetValue(float)` |
 | `WindowPanel` | `bool IsOpen` | `Open()`、`Close()`、`ToggleOpen()` |
 
 - イベントは「変わった」ことだけを伝えます。値は、部品から読みます。
 - `SetValue` は、値が実際に変わったときだけ、通知先にイベントを送ります。`SetValueWithoutNotify` は送りません。初期化や、同期で受け取った値の反映に使います。
 - ウィンドウの開閉は、スクリプトを書かなくても設定できます。`UIBuilder.SetEvent(button, window, nameof(WindowPanel.Open))` のように、ウィンドウ自身を通知先にします。
 - ウィンドウを開くためのボタンは、ウィンドウの外（別の Canvas）に置きます。
+- `StepperControl` の値を整数として使うときは、`Mathf.RoundToInt(stepper.Value)` で読みます。
+- `ProgressBar` には、進み具合が変わったときだけ `SetValue` を呼びます。毎フレーム呼ぶ使い方は避けます。
 - アイコンの種類を実行時に変えるときは、`RawImage` の `uvRect` に `new Rect(番号 * 2f, 0f, 1f, 1f)` を入れます。番号は `IconType` の並び順（`Close` が 0）です。
 - 名前が `_` で始まるメソッド（`_OnClick` など）は、部品の内部で使うものです。呼び出しません。
 
@@ -233,6 +241,6 @@ UdonSharp のスクリプトから、部品の値を読み書きできます。�
 
 次の部品と機能は、この版にはありません。必要な場合は、uGUI で自作するか、利用者に相談します。
 
-- チェックボックス、ドロップダウン、数値ステッパー、進捗バー、テキスト入力
+- ドロップダウン、テキスト入力
 - タブ、スクロール領域、確認ダイアログ
 - 同期、効果音、開閉などのアニメーション
