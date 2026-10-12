@@ -14,21 +14,14 @@
 # ClientSim がエディタ再生時に保存するローカルのテストデータ
 /ClientSimStorage/
 
-# VCC、VRChat SDK、TextMeshPro が自動で作るもの。プロジェクトを開けば作り直される。
-# 最初のシーンにはワールド ID が保存されるので、公開するリポジトリには含めない。
-/Assets/Scenes/
-/Assets/Scenes.meta
-/Assets/TextMesh Pro/
-/Assets/TextMesh Pro.meta
-/Assets/UdonSharp/
-/Assets/UdonSharp.meta
-/Assets/SerializedUdonPrograms/
-/Assets/SerializedUdonPrograms.meta
-
-# 利用者ごとのファイル（ダウンロードしたフォントとライセンス文書、追加で収録する文字の指定、
-# 生成したデモシーンなど）。ツールキット本体は Packages/com.helkya.zeroshotudonui/ にある。
-/Assets/ZeroShotUdonUI/
-/Assets/ZeroShotUdonUI.meta
+# Assets の下は、何も管理しない（フォルダを残すための .gitkeep を除く）。
+# ツールキット本体は Packages/com.helkya.zeroshotudonui/ にある。Assets の下にあるのは、次のようなもの。
+# - VCC、VRChat SDK、TextMeshPro が自動で作るもの。プロジェクトを開けば作り直される。
+#   VCC が作る最初のシーンにはワールド ID が保存されるので、公開するリポジトリには含めない。
+# - 利用者ごとのファイル（Assets/ZeroShotUdonUI/。ダウンロードしたフォント、設定の控え、生成したデモシーンなど）
+# - 開発中の試験用のコードとシーン（Assets/ZSTests/）
+/Assets/*
+!/Assets/.gitkeep
 
 # エディタや IDE が生成するファイル
 .vs/

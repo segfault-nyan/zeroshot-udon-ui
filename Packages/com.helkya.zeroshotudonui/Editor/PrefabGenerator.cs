@@ -338,7 +338,7 @@ namespace ZeroShotUdonUI.EditorTools
         /// </summary>
         private static GameObject BuildWindow()
         {
-            // 開閉するスクリプトは、閉じている間もイベントを受け取れるよう、Canvas の親に置く。
+            // 開閉するスクリプトは、初期化（Start）が開閉に左右されないよう、常に有効な Canvas の親に置く。
             GameObject root = new GameObject("Window");
 
             GameObject canvas = InstantiateNested(PrefabKind.Canvas, root.transform);

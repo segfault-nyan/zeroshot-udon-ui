@@ -8,7 +8,7 @@ namespace ZeroShotUdonUI
     /// <summary>
     /// ウィンドウ。開閉の状態は中身のオブジェクトの有効・無効が持ち、このスクリプトを通して読み書きする。
     /// 開閉が変わると通知先にイベントを送る。
-    /// このスクリプト自体は、閉じている間もイベントを受け取れるよう、常に有効なオブジェクトに置く。
+    /// このスクリプト自体は、初期化（Start）が開閉に左右されないよう、常に有効なオブジェクトに置く。
     /// </summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class WindowPanel : ControlBase

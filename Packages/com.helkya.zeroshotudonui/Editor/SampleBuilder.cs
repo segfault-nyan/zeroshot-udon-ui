@@ -43,7 +43,7 @@ namespace ZeroShotUdonUI.EditorTools
         /// </summary>
         internal static GameObject BuildSettingsSample(Vector3 position, Quaternion rotation)
         {
-            // 制作者側のスクリプトは、ウィンドウを閉じている間も動くよう、ウィンドウの外に置く。
+            // 制作者側のスクリプトは、ウィンドウの外に置く。中に置くと、最初に開くまで Start が実行されない。
             GameObject root = new GameObject("ZS Sample");
 
             WindowPanel window = UIBuilder.CreateWindow("Settings Window", "Settings", WindowSize, out RectTransform content);
