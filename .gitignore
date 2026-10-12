@@ -1,0 +1,45 @@
+# Unity が自動生成するフォルダ
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+
+# VRChat SDK 本体（VCC が Packages/vpm-manifest.json から復元する）
+/Packages/com.vrchat.*/
+
+# ClientSim がエディタ再生時に保存するローカルのテストデータ
+/ClientSimStorage/
+
+# VCC、VRChat SDK、TextMeshPro が自動で作るもの。プロジェクトを開けば作り直される。
+# 最初のシーンにはワールド ID が保存されるので、公開するリポジトリには含めない。
+/Assets/Scenes/
+/Assets/Scenes.meta
+/Assets/TextMesh Pro/
+/Assets/TextMesh Pro.meta
+/Assets/UdonSharp/
+/Assets/UdonSharp.meta
+/Assets/SerializedUdonPrograms/
+/Assets/SerializedUdonPrograms.meta
+
+# 利用者ごとのファイル（ダウンロードしたフォントとライセンス文書、追加で収録する文字の指定、
+# 生成したデモシーンなど）。ツールキット本体は Packages/com.helkya.zeroshotudonui/ にある。
+/Assets/ZeroShotUdonUI/
+/Assets/ZeroShotUdonUI.meta
+
+# エディタや IDE が生成するファイル
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+
+# OS が生成するファイル
+.DS_Store
+Thumbs.db

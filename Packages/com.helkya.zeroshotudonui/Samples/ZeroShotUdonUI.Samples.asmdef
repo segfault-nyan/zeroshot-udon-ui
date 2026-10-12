@@ -1,0 +1,22 @@
+{
+    "name": "ZeroShotUdonUI.Samples",
+    "rootNamespace": "ZeroShotUdonUI.Samples",
+    "references": [
+        "ZeroShotUdonUI.Runtime",
+        "UdonSharp.Runtime",
+        "VRC.Udon",
+        "VRC.SDKBase",
+        "VRC.SDK3",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,85 @@
+# パッケージを公開する。GitHub の Actions の画面から、手動で実行する。
+#
+# 1. package.json の版番号で zip を作り、GitHub のリリースに添付する。
+# 2. 公開済みの全部の版から、VCC が読む一覧と導入ページを作り、GitHub Pages に公開する。
+#
+# 実行の前に、リポジトリの設定が必要（Docs/RELEASE.md）。
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      listing_only:
+        description: 一覧と導入ページだけを作り直す（新しい版は公開しない）
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: パッケージの zip を作る
+        id: package
+        if: ${{ !inputs.listing_only }}
+        env:
+          AUTHOR_EMAIL: ${{ vars.AUTHOR_EMAIL }}
+        run: >
+          python3 .github/scripts/release.py package
+          --repository "$GITHUB_REPOSITORY"
+          --author-email "$AUTHOR_EMAIL"
+          --output dist
+
+      - name: リリースを作る
+        if: ${{ !inputs.listing_only }}
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            echo "::error::版 $VERSION は公開済みです。package.json の version を上げてください。"
+            exit 1
+          fi
+          gh release create "$VERSION" "${{ steps.package.outputs.zip }}" dist/package.json \
+            --title "$VERSION" --notes-file dist/notes.md --target "$GITHUB_SHA"
+
+      - name: 公開済みの各版の定義ファイルを集める
+        run: |
+          mkdir -p manifests
+          for tag in $(gh release list --limit 1000 --exclude-drafts --json tagName --jq '.[].tagName'); do
+            if ! gh release download "$tag" --pattern package.json --dir "manifests/$tag"; then
+              echo "::warning::リリース $tag に package.json が無いため、一覧に含めません。"
+            fi
+          done
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: 一覧と導入ページを作る
+        run: >
+          python3 .github/scripts/release.py listing
+          --manifests manifests
+          --site-url "${{ steps.pages.outputs.base_url }}"
+          --repository "$GITHUB_REPOSITORY"
+          --output site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

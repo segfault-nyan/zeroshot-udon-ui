@@ -1,0 +1,70 @@
+Third-party materials related to fonts
+======================================
+
+ZeroShot Udon UI does not redistribute any font. The font asset shipped
+with the toolkit (Runtime/Fonts/ZS_Font.asset) is empty. Its contents are
+generated on your machine from a font that you already have or that you
+download yourself.
+
+This file explains where those fonts come from and which licenses apply.
+The licenses below are separate from the license of the toolkit itself.
+
+
+Fonts used to generate ZS_Font.asset
+------------------------------------
+
+1. LiberationSans (default, Latin characters)
+
+   The toolkit generates the Latin characters from LiberationSans.ttf,
+   which TextMesh Pro adds to your project as part of "TMP Essential
+   Resources" (Assets/TextMesh Pro/Fonts). Its license is in the same
+   folder ("LiberationSans - OFL.txt").
+
+2. Noto Sans JP (optional, Japanese characters)
+
+   When you press "Noto Sans JP をダウンロード" in the font settings
+   window, the toolkit downloads these two files from the official Noto
+   CJK repository into Assets/ZeroShotUdonUI/Fonts:
+
+     NotoSansJP-Medium.otf
+     NotoSansJP-LICENSE.txt
+
+   Copyright notice (as recorded in the font file):
+     (c) 2014-2021 Adobe (http://www.adobe.com/).
+     Noto is a trademark of Google Inc.
+
+   License:
+     SIL Open Font License, Version 1.1. The full text is downloaded
+     together with the font (NotoSansJP-LICENSE.txt).
+
+   Source:
+     https://github.com/notofonts/noto-cjk
+     (Sans/SubsetOTF/JP/NotoSansJP-Medium.otf)
+
+After generation, ZS_Font.asset contains a subset of the glyphs of the
+source font, converted to a signed distance field texture. It is a
+Modified Version of that font and remains under the font's license. A
+world that you build with it includes those glyphs, so follow the license
+of the font you used. For fonts under the SIL Open Font License, crediting
+the font name and its license in your world or its description is a safe
+way to do so.
+
+If you share your project with other people, either reset ZS_Font.asset
+to the empty state first (the "空の状態に戻す" button in the font settings
+window) or include the font's copyright notice and license with it.
+
+
+Joyo kanji list
+---------------
+
+File:
+  JoyoKanji.txt
+
+This file is included with the toolkit. The list was extracted from the
+kJoyoKanji field of the Unicode Han Database (Unihan), Unicode Version
+18.0.0. The first line holds the 2,136 characters of the Joyo kanji
+table. The second line holds four commonly typed variant forms that the
+database maps to characters in the table.
+
+Copyright (c) 2026 Unicode, Inc.
+Terms of use and license: https://www.unicode.org/terms_of_use.html

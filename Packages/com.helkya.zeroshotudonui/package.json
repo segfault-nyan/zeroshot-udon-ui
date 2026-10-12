@@ -1,0 +1,14 @@
+{
+  "name": "com.helkya.zeroshotudonui",
+  "displayName": "ZeroShot Udon UI",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "A UI toolkit for VRChat worlds, built on uGUI, TextMeshPro and UdonSharp. Works on PC and Quest. Everything except third-party materials is AI-generated.",
+  "license": "MIT",
+  "author": {
+    "name": "helkya"
+  },
+  "vpmDependencies": {
+    "com.vrchat.worlds": ">=3.10.5"
+  }
+}

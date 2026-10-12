@@ -1,0 +1,29 @@
+{
+    "name": "ZeroShotUdonUI.Editor",
+    "rootNamespace": "ZeroShotUdonUI.EditorTools",
+    "references": [
+        "ZeroShotUdonUI.Runtime",
+        "ZeroShotUdonUI.Samples",
+        "UdonSharp.Runtime",
+        "UdonSharp.Editor",
+        "VRC.Udon",
+        "VRC.Udon.Editor",
+        "VRC.Udon.Serialization.OdinSerializer",
+        "VRC.SDKBase",
+        "VRC.SDK3",
+        "Unity.TextMeshPro",
+        "Unity.TextMeshPro.Editor",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
