@@ -1,6 +1,6 @@
 # ZeroShot Udon UI 設計素案
 
-- 版：0.35（素案）
+- 版：0.36（素案）
 - 作成日：2026-10-11
 - 状態：未承認。この文書の内容はすべて提案であり、承認された項目から実装に進む。
 
@@ -113,7 +113,7 @@ AI 生成ワールドでは、UI を組み込む作業も AI が行う。AI は 
 | CMP-04 | スライダー | つまみを動かして数値を決める。現在値の表示つき | P1 | 完了 | `Runtime/Scripts/SliderControl.cs`、`Runtime/Prefabs/Components/ZS_Slider.prefab` |
 | CMP-05 | チェックボックス | 複数の項目を個別にオン・オフする。丸い枠にチェックのアイコンと、右に項目名。枠を丸くしたのは、マテリアルを増やさず、ほかの部品と形を揃えるため | P2 | 完了 | `Runtime/Scripts/CheckboxControl.cs`、`Runtime/Prefabs/Components/ZS_Checkbox.prefab` |
 | CMP-06 | 選択ボタン群 | 複数の選択肢から1つを選ぶ（横並びの切り替えボタン）。プレハブの選択肢は2つで、Unity 上で複製して増やせる | P1 | 完了 | `Runtime/Scripts/SegmentedControl.cs`、`Runtime/Prefabs/Components/ZS_SegmentedControl.prefab` |
-| CMP-07 | ドロップダウン | 一覧を開いて1つを選ぶ。TextMeshPro 標準のドロップダウン（`TMP_Dropdown`）を使い、見た目をツールキットの部品で組む（10.7）。Unity 上の再生とデスクトップの VRChat で動作を確認済み（2026-10-13）。VR と Quest では未確認 | P2 | 完了 | `Runtime/Scripts/DropdownControl.cs`、`Runtime/Prefabs/Components/ZS_Dropdown.prefab` |
+| CMP-07 | ドロップダウン | 一覧を開いて1つを選ぶ。TextMeshPro 標準のドロップダウン（`TMP_Dropdown`）を使い、見た目をツールキットの部品で組む（10.7）。Unity 上の再生、PC（デスクトップと VR）、Quest 3 で動作を確認済み（2026-10-13） | P2 | 完了 | `Runtime/Scripts/DropdownControl.cs`、`Runtime/Prefabs/Components/ZS_Dropdown.prefab` |
 | CMP-08 | 数値ステッパー | ＋と－のボタンで数値を増減する。値は最小値から数えて増減の幅の倍数に丸める。上限・下限では、その側のボタンを押せなくする。押し続けての連続増減は無い（NFR-01） | P2 | 完了 | `Runtime/Scripts/StepperControl.cs`、`Runtime/Prefabs/Components/ZS_Stepper.prefab` |
 | CMP-09 | 進捗バー | 進み具合を表示する（操作はできない）。当たり判定を持たない。イベントは送らない | P2 | 完了 | `Runtime/Scripts/ProgressBar.cs`、`Runtime/Prefabs/Components/ZS_ProgressBar.prefab` |
 | CMP-10 | テキスト入力 | 文字を入力する。VR ではキーボードが開く。VRChat 上での動作検証が必要 | P3 | 未着手 | — |
@@ -186,7 +186,7 @@ AI 生成ワールドでは、UI を組み込む作業も AI が行う。AI は 
 | 段階 | 目標 | 含む項目 |
 |---|---|---|
 | 第1段階 | 設定画面を1枚作れる | P1 の全項目（2026-10-11 に完了） |
-| 第2段階 | 複数画面の UI を作れ、配布できる | P2 の全項目 |
+| 第2段階 | 複数画面の UI を作れ、配布できる | P2 の全項目。フォントとアイコン、配布、部品の追加は完了し、`0.2.0` として公開（2026-10-13）。残りは仕上げ（FND-02、SYS-03〜06） |
 | 第3段階 | 発展的な機能 | P3 の全項目（採否は個別に判断） |
 
 第1段階の進め方の案は次のとおり。
@@ -687,3 +687,4 @@ Noto Sans JP を 4096 x 2048 の画像で生成した場合、収録は 2,732 �
 | 0.33 | 2026-10-12 | 確認ダイアログの ID が作り直しで変わる問題を修正。名前の重複は、中に含めたプレハブの中身も数に入れる必要があった（8.5 を修正）。`プレハブを生成` に、名前の重複と ID の変化の検査を追加 |
 | 0.34 | 2026-10-13 | ドロップダウン（CMP-07）を実装。TextMeshPro 標準の仕組みを使う方式に決定し、Unity 上とデスクトップの VRChat で動作を確認。10.7 を追加 |
 | 0.35 | 2026-10-13 | 設定チェック（EDT-03）を実装。11.6 を追加。C グループ（部品の追加）の全項目が完了 |
+| 0.36 | 2026-10-13 | 第2段階で追加した部品（チェックボックス、数値ステッパー、進捗バー、ドロップダウン、タブ、スクロール領域、確認ダイアログ）を、PC の VR と Quest 3 で確認。`0.2.0` として公開 |
