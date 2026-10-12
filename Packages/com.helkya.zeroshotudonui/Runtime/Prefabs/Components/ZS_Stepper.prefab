@@ -264,6 +264,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Increase Button
       objectReference: {fileID: 0}
+    - target: {fileID: 5664269824388270697, guid: 33e4d718942b4eb41abb42d3f76ce320, type: 3}
+      propertyPath: m_Name
+      value: Increase Icon
+      objectReference: {fileID: 0}
     - target: {fileID: 6661530512061319190, guid: 33e4d718942b4eb41abb42d3f76ce320, type: 3}
       propertyPath: eventName
       value: _OnIncrease
@@ -396,6 +400,10 @@ PrefabInstance:
     - target: {fileID: 5646885144697558050, guid: 33e4d718942b4eb41abb42d3f76ce320, type: 3}
       propertyPath: m_Interactable
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5664269824388270697, guid: 33e4d718942b4eb41abb42d3f76ce320, type: 3}
+      propertyPath: m_Name
+      value: Decrease Icon
       objectReference: {fileID: 0}
     - target: {fileID: 6661530512061319190, guid: 33e4d718942b4eb41abb42d3f76ce320, type: 3}
       propertyPath: eventName

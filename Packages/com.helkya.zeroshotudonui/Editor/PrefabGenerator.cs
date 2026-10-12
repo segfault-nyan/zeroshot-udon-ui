@@ -1,6 +1,8 @@
 
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 using TMPro;
 using UdonSharp;
 using UdonSharpEditor;
@@ -159,6 +161,11 @@ namespace ZeroShotUdonUI.EditorTools
                     return;
             }
 
+            // 作り直しの前後で内部の ID を比べるために、今の状態を控えておく。
+            Dictionary<PrefabKind, HashSet<string>> idsBefore = new Dictionary<PrefabKind, HashSet<string>>();
+            foreach (PrefabKind kind in System.Enum.GetValues(typeof(PrefabKind)))
+                idsBefore[kind] = ReadObjectIds(kind);
+
             int generatedCount = 0;
             foreach (PrefabKind kind in System.Enum.GetValues(typeof(PrefabKind)))
             {
@@ -167,8 +174,94 @@ namespace ZeroShotUdonUI.EditorTools
             }
 
             AssetDatabase.SaveAssets();
-            EditorUtility.DisplayDialog(UIBuilder.DisplayName,
-                generatedCount + " 個のプレハブを生成しました。\n" + PrefabFolder, "OK");
+
+            string message = generatedCount + " 個のプレハブを生成しました。\n" + PrefabFolder;
+            string problems = FindProblems(idsBefore);
+            if (problems.Length > 0)
+            {
+                message += "\n\n" + problems;
+                Debug.LogWarning("[" + UIBuilder.DisplayName + "] " + problems);
+            }
+
+            EditorUtility.DisplayDialog(UIBuilder.DisplayName, message, "OK");
+        }
+
+        // プレハブのファイルの中で、オブジェクトごとの区切りに書かれている内部の ID。
+        private static readonly Regex ObjectIdPattern = new Regex(@"^--- !u!\d+ &(-?\d+)", RegexOptions.Multiline);
+
+        // プレハブのファイルに書かれている内部の ID を集める。ファイルが無ければ null を返す。
+        private static HashSet<string> ReadObjectIds(PrefabKind kind)
+        {
+            string path = GetPath(kind);
+            if (!File.Exists(path))
+                return null;
+
+            HashSet<string> ids = new HashSet<string>();
+            foreach (Match match in ObjectIdPattern.Matches(File.ReadAllText(path)))
+                ids.Add(match.Groups[1].Value);
+
+            return ids;
+        }
+
+        /// <summary>
+        /// 作り直したプレハブを検査し、配置済みの UI との対応が崩れる原因になるものを探す。
+        /// 見つかったものの説明を返す。問題が無ければ、空の文字列を返す。
+        /// </summary>
+        private static string FindProblems(Dictionary<PrefabKind, HashSet<string>> idsBefore)
+        {
+            List<string> duplicated = new List<string>();
+            List<string> changed = new List<string>();
+
+            foreach (PrefabKind kind in System.Enum.GetValues(typeof(PrefabKind)))
+            {
+                GameObject prefab = Load(kind);
+                if (prefab == null)
+                    continue;
+
+                // Unity は、作り直しの前後の対応を名前だけで取る。中に含めたプレハブの中身も含めて、
+                // 同じ名前が複数あると取り違えるので、ここで見つける。
+                HashSet<string> seenNames = new HashSet<string>();
+                HashSet<string> duplicatedNames = new HashSet<string>();
+                foreach (Transform child in prefab.GetComponentsInChildren<Transform>(true))
+                {
+                    if (!seenNames.Add(child.name))
+                        duplicatedNames.Add(child.name);
+                }
+
+                if (duplicatedNames.Count > 0)
+                    duplicated.Add(prefab.name + "（" + string.Join("、", duplicatedNames) + "）");
+
+                // 作り直しの前にあった ID が無くなっていれば、対応が切れている。
+                HashSet<string> before = idsBefore[kind];
+                HashSet<string> after = ReadObjectIds(kind);
+                if (before == null || after == null)
+                    continue;
+
+                int lostCount = 0;
+                foreach (string id in before)
+                {
+                    if (!after.Contains(id))
+                        lostCount++;
+                }
+
+                if (lostCount > 0)
+                    changed.Add(prefab.name + "（" + lostCount + " 個）");
+            }
+
+            string problems = "";
+            if (duplicated.Count > 0)
+            {
+                problems += "同じ名前のオブジェクトが複数あるプレハブがあります。作り直すたびに、配置済みの UI の設定が初期値に戻るおそれがあります。\n"
+                    + string.Join("\n", duplicated) + "\n\n";
+            }
+
+            if (changed.Count > 0)
+            {
+                problems += "内部の ID が変わったプレハブがあります。配置済みの UI のうち、その部分の設定が初期値に戻ります。\n"
+                    + string.Join("\n", changed);
+            }
+
+            return problems.TrimEnd();
         }
 
         internal static GameObject Load(PrefabKind kind)
@@ -783,8 +876,8 @@ namespace ZeroShotUdonUI.EditorTools
             RectTransform rect = CreateRect("Stepper", null, StepperSize);
 
             // 左端に－、右端に＋のボタンを置き、その間に現在値を表示する。
-            GameObject decrease = BuildStepperButton(rect, UIBuilder.StepperDecreaseName, 0f, IconType.Minus);
-            GameObject increase = BuildStepperButton(rect, UIBuilder.StepperIncreaseName, 1f, IconType.Plus);
+            GameObject decrease = BuildStepperButton(rect, UIBuilder.StepperDecreaseName, "Decrease Icon", 0f, IconType.Minus);
+            GameObject increase = BuildStepperButton(rect, UIBuilder.StepperIncreaseName, "Increase Icon", 1f, IconType.Plus);
 
             TextMeshProUGUI valueLabel = BuildLabel(rect, "", 24f, Vector2.zero, TextColor, FontStyles.Normal);
             valueLabel.gameObject.name = UIBuilder.ValueLabelName;
@@ -811,7 +904,8 @@ namespace ZeroShotUdonUI.EditorTools
         }
 
         // ステッパーの端に置くアイコンボタンを作る。side は 0 で左端、1 で右端。
-        private static GameObject BuildStepperButton(RectTransform parent, string name, float side, IconType icon)
+        // 2つのボタンの中のアイコンが同じ名前にならないよう、iconName で名前を付け直す。
+        private static GameObject BuildStepperButton(RectTransform parent, string name, string iconName, float side, IconType icon)
         {
             GameObject button = InstantiateNested(PrefabKind.ButtonIcon, parent);
             button.name = name;
@@ -824,10 +918,11 @@ namespace ZeroShotUdonUI.EditorTools
             buttonRect.sizeDelta = new Vector2(StepperSize.y, StepperSize.y);
 
             RawImage iconImage = button.GetComponentInChildren<RawImage>(true);
+            iconImage.gameObject.name = iconName;
             UIBuilder.SetIcon(iconImage, icon);
 
             // 中に含めたプレハブへの変更は、記録しないとこのプレハブに保存されない。
-            UIBuilder.RecordOverrides(button, buttonRect, iconImage);
+            UIBuilder.RecordOverrides(button, buttonRect, iconImage.gameObject, iconImage);
 
             return button;
         }
@@ -871,7 +966,7 @@ namespace ZeroShotUdonUI.EditorTools
             Slider slider = rect.gameObject.AddComponent<Slider>();
             slider.interactable = false;
             slider.transition = Selectable.Transition.None;
-            slider.navigation = new Navigation { mode = Navigation.Mode.None };
+            DisableKeyNavigation(slider);
             slider.fillRect = fill;
             slider.direction = Slider.Direction.LeftToRight;
             slider.minValue = 0f;
@@ -1041,8 +1136,8 @@ namespace ZeroShotUdonUI.EditorTools
             messageText.alignment = TextAlignmentOptions.TopLeft;
 
             // ボタンは右下に並べる。右が「はい」、その左が「いいえ」。
-            GameObject confirm = BuildDialogButton(canvas.transform, PrefabKind.ButtonPrimary, UIBuilder.DialogConfirmName, "OK", 0);
-            GameObject cancel = BuildDialogButton(canvas.transform, PrefabKind.ButtonOutline, UIBuilder.DialogCancelName, "Cancel", 1);
+            GameObject confirm = BuildDialogButton(canvas.transform, PrefabKind.ButtonPrimary, UIBuilder.DialogConfirmName, "Confirm Label", "OK", 0);
+            GameObject cancel = BuildDialogButton(canvas.transform, PrefabKind.ButtonOutline, UIBuilder.DialogCancelName, "Cancel Label", "Cancel", 1);
 
             ConfirmDialog dialog = root.AddUdonSharpComponent<ConfirmDialog>();
             SerializedObject serializedDialog = new SerializedObject(dialog);
@@ -1061,7 +1156,8 @@ namespace ZeroShotUdonUI.EditorTools
         }
 
         // ダイアログの右下に置くボタンを作る。indexFromRight は右から数えた順番（0 始まり）。
-        private static GameObject BuildDialogButton(Transform parent, PrefabKind kind, string name, string label, int indexFromRight)
+        // 2つのボタンの中の文字が同じ名前にならないよう、labelName で名前を付け直す。
+        private static GameObject BuildDialogButton(Transform parent, PrefabKind kind, string name, string labelName, string label, int indexFromRight)
         {
             GameObject button = InstantiateNested(kind, parent);
             button.name = name;
@@ -1075,10 +1171,11 @@ namespace ZeroShotUdonUI.EditorTools
             buttonRect.sizeDelta = DialogButtonSize;
 
             TextMeshProUGUI text = button.GetComponentInChildren<TextMeshProUGUI>(true);
+            text.gameObject.name = labelName;
             text.text = label;
 
             // 中に含めたプレハブへの変更は、記録しないとこのプレハブに保存されない。
-            UIBuilder.RecordOverrides(button, buttonRect, text);
+            UIBuilder.RecordOverrides(button, buttonRect, text.gameObject, text);
 
             return button;
         }
@@ -1181,7 +1278,23 @@ namespace ZeroShotUdonUI.EditorTools
             selectable.targetGraphic = targetGraphic;
             selectable.transition = Selectable.Transition.ColorTint;
             selectable.colors = colors;
-            selectable.navigation = new Navigation { mode = Navigation.Mode.None };
+            DisableKeyNavigation(selectable);
+        }
+
+        // 方向入力（WASD や矢印キー）で、部品が動かないようにしておく。VRChat では、WASD は歩くために使われる。
+        // uGUI のスライダーとスクロールバーは、選ばれた状態で方向入力を受けると、移動先が無い場合に自分の値を動かす。
+        // 移動先を自分自身にしておくと、値は動かず、ほかの部品へ選択が移ることもない。
+        // VRChat が実際に方向入力を送るかは確かめられていないので、予防としての設定。
+        private static void DisableKeyNavigation(Selectable selectable)
+        {
+            selectable.navigation = new Navigation
+            {
+                mode = Navigation.Mode.Explicit,
+                selectOnUp = selectable,
+                selectOnDown = selectable,
+                selectOnLeft = selectable,
+                selectOnRight = selectable,
+            };
         }
 
         // 色はマテリアルが持つので、Image 側の色は白のままにする。

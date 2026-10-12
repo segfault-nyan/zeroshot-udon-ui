@@ -129,12 +129,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Navigation:
-    m_Mode: 0
+    m_Mode: 4
     m_WrapAround: 0
-    m_SelectOnUp: {fileID: 0}
-    m_SelectOnDown: {fileID: 0}
-    m_SelectOnLeft: {fileID: 0}
-    m_SelectOnRight: {fileID: 0}
+    m_SelectOnUp: {fileID: 276286895101740692}
+    m_SelectOnDown: {fileID: 276286895101740692}
+    m_SelectOnLeft: {fileID: 276286895101740692}
+    m_SelectOnRight: {fileID: 276286895101740692}
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 0.86, g: 0.86, b: 0.86, a: 1}
