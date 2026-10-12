@@ -207,6 +207,10 @@ namespace ZeroShotUdonUI.EditorTools
             UIBuilder.CreateCheckbox(right, "Unchecked", false);
             UIBuilder.CreateCheckbox(right, "Checked", true);
 
+            // 一覧に収まらない数の選択肢を入れて、一覧の中でスクロールすることも見られるようにする。
+            UIBuilder.CreateLabel(right, "Dropdown", LabelStyle.Caption);
+            UIBuilder.CreateDropdown(right, new[] { "Low", "Medium", "High", "Ultra", "Custom", "Auto" }, 1);
+
             UIBuilder.CreateLabel(right, "Labels", LabelStyle.Caption);
             UIBuilder.CreateLabel(right, "Heading", LabelStyle.Heading);
             UIBuilder.CreateLabel(right, "Body", LabelStyle.Body);

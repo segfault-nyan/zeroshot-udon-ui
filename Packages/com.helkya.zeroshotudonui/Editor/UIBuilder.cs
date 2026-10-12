@@ -701,6 +701,29 @@ namespace ZeroShotUdonUI.EditorTools
             return instance.GetComponent<SegmentedControl>();
         }
 
+        /// <summary>
+        /// ドロップダウンを置く。options は上から順の選択肢の名前で、1つ以上必要。
+        /// スクリプトから読み書きできるのは、選ばれている番号だけ。選択肢の文字は読めない。
+        /// </summary>
+        public static DropdownControl CreateDropdown(Transform parent, string[] options, int selectedIndex)
+        {
+            if (options == null || options.Length < 1)
+                throw new System.ArgumentException("選択肢は1つ以上必要です。", nameof(options));
+            if (selectedIndex < 0 || selectedIndex >= options.Length)
+                throw new System.ArgumentOutOfRangeException(nameof(selectedIndex));
+
+            GameObject instance = Instantiate(PrefabKind.Dropdown, parent);
+
+            TMP_Dropdown dropdown = instance.GetComponent<TMP_Dropdown>();
+            dropdown.ClearOptions();
+            dropdown.AddOptions(new List<string>(options));
+            dropdown.SetValueWithoutNotify(selectedIndex);
+
+            // 選ばれている項目の名前の表示は、TMP_Dropdown が書き換えている。
+            RecordOverrides(dropdown, dropdown.captionText);
+            return instance.GetComponent<DropdownControl>();
+        }
+
         // 配置済みの選択ボタン群に、選択肢の数・名前・最初の選択を設定する。
         private static void ConfigureSegmented(GameObject instance, string[] options, int selectedIndex)
         {
@@ -838,6 +861,7 @@ namespace ZeroShotUdonUI.EditorTools
                 typeof(ProgressBar),
                 typeof(TabView),
                 typeof(ConfirmDialog),
+                typeof(DropdownControl),
             };
             behaviours.AddRange(extraBehaviours);
 

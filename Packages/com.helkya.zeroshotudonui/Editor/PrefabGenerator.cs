@@ -13,7 +13,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using VRC.Udon;
 
-// FND-04・FND-05・FND-08・LAY-01・LAY-03・LAY-04・LAY-05・LAY-06・LAY-07・CMP-01・CMP-03・CMP-04・CMP-05・CMP-06・CMP-08・CMP-09・CMP-11
+// FND-04・FND-05・FND-08・LAY-01・LAY-03・LAY-04・LAY-05・LAY-06・LAY-07・CMP-01・CMP-03・CMP-04・CMP-05・CMP-06・CMP-07・CMP-08・CMP-09・CMP-11
 namespace ZeroShotUdonUI.EditorTools
 {
     internal enum PrefabKind
@@ -40,6 +40,7 @@ namespace ZeroShotUdonUI.EditorTools
         ButtonIcon,
         Checkbox,
         Stepper,
+        Dropdown,
         Window,
         Tabs,
         Dialog,
@@ -68,6 +69,13 @@ namespace ZeroShotUdonUI.EditorTools
         private const float ScrollbarGap = 12f;
         private const float TabsHeaderHeight = 48f;
 
+        // ドロップダウンの一覧。項目の高さ、一覧の縁と項目の間隔、一覧の高さの上限（これを超える分は一覧の中でスクロールする）、
+        // ドロップダウン本体と一覧の間隔。
+        private const float DropdownItemHeight = 44f;
+        private const float DropdownListPadding = 8f;
+        private const float DropdownListMaxHeight = 204f;
+        private const float DropdownListGap = 8f;
+
         // マウスのホイールを1目盛り回したときに動く量（Canvas 単位）。
         private const float ScrollSensitivity = 40f;
         private const float OutlineWidth = 2f;
@@ -92,6 +100,9 @@ namespace ZeroShotUdonUI.EditorTools
         private static readonly Vector2 CheckboxBoxSize = new Vector2(32f, 32f);
         private static readonly Vector2 CheckboxCheckSize = new Vector2(20f, 20f);
         private static readonly Vector2 StepperSize = new Vector2(200f, 48f);
+        private static readonly Vector2 DropdownSize = new Vector2(300f, 48f);
+        private static readonly Vector2 DropdownArrowSize = new Vector2(20f, 20f);
+        private static readonly Vector2 DropdownCheckSize = new Vector2(18f, 18f);
         private static readonly Vector2 ScrollAreaSize = new Vector2(520f, 300f);
         private static readonly Vector2 TabsSize = new Vector2(520f, 400f);
         private static readonly Vector2 DialogSize = new Vector2(480f, 260f);
@@ -316,6 +327,7 @@ namespace ZeroShotUdonUI.EditorTools
                 case PrefabKind.ProgressBar: return PrefabFolder + "/Components/ZS_ProgressBar.prefab";
                 case PrefabKind.Checkbox: return PrefabFolder + "/Components/ZS_Checkbox.prefab";
                 case PrefabKind.Stepper: return PrefabFolder + "/Components/ZS_Stepper.prefab";
+                case PrefabKind.Dropdown: return PrefabFolder + "/Components/ZS_Dropdown.prefab";
                 case PrefabKind.Window: return PrefabFolder + "/Layouts/ZS_Window.prefab";
                 case PrefabKind.ScrollArea: return PrefabFolder + "/Layouts/ZS_ScrollArea.prefab";
                 case PrefabKind.Tabs: return PrefabFolder + "/Layouts/ZS_Tabs.prefab";
@@ -347,6 +359,7 @@ namespace ZeroShotUdonUI.EditorTools
                 case PrefabKind.ProgressBar: return BuildProgressBar();
                 case PrefabKind.Checkbox: return BuildCheckbox();
                 case PrefabKind.Stepper: return BuildStepper();
+                case PrefabKind.Dropdown: return BuildDropdown();
                 case PrefabKind.Window: return BuildWindow();
                 case PrefabKind.ScrollArea: return BuildScrollArea();
                 case PrefabKind.Tabs: return BuildTabs();
@@ -1016,8 +1029,16 @@ namespace ZeroShotUdonUI.EditorTools
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            // 右端のスクロールバー。つまみの長さと位置は、uGUI の Scrollbar が決める。
-            RectTransform scrollbarRect = CreateRect("Scrollbar", rect, Vector2.zero);
+            AddVerticalScroll(rect, viewport, content, BuildScrollbar(rect));
+
+            SetLayoutWidth(rect, true);
+            return rect.gameObject;
+        }
+
+        // 親の右端に、縦のスクロールバーを作る。つまみの長さと位置は、uGUI の Scrollbar が決める。
+        private static Scrollbar BuildScrollbar(RectTransform parent)
+        {
+            RectTransform scrollbarRect = CreateRect("Scrollbar", parent, Vector2.zero);
             scrollbarRect.anchorMin = new Vector2(1f, 0f);
             scrollbarRect.anchorMax = new Vector2(1f, 1f);
             scrollbarRect.pivot = new Vector2(1f, 0.5f);
@@ -1036,8 +1057,12 @@ namespace ZeroShotUdonUI.EditorTools
             SetupSelectable(scrollbar, handleImage);
             scrollbar.handleRect = handle;
             scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            return scrollbar;
+        }
 
-            // 縦方向だけ動かす。端を越えては動かさない。中身が収まっているときは、スクロールバーを隠す。
+        // 縦方向だけスクロールする設定を付ける。端を越えては動かさない。中身が収まっているときは、スクロールバーを隠す。
+        private static void AddVerticalScroll(RectTransform rect, RectTransform viewport, RectTransform content, Scrollbar scrollbar)
+        {
             ScrollRect scrollRect = rect.gameObject.AddComponent<ScrollRect>();
             scrollRect.viewport = viewport;
             scrollRect.content = content;
@@ -1047,8 +1072,124 @@ namespace ZeroShotUdonUI.EditorTools
             scrollRect.scrollSensitivity = ScrollSensitivity;
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        }
 
-            SetLayoutWidth(rect, true);
+        /// <summary>
+        /// ドロップダウンを作る。開閉や一覧の生成は TextMeshPro の TMP_Dropdown が行うので、ここではその部品を組み立てる。
+        /// Template は一覧のひな形で、開くたびに TMP_Dropdown が複製して表示する。Item は項目のひな形で、選択肢の数だけ複製される。
+        /// </summary>
+        private static GameObject BuildDropdown()
+        {
+            RectTransform rect = CreateRect("Dropdown", null, DropdownSize);
+            Image background = AddImage(rect, GetMaterial(MaterialRole.Track), true);
+
+            // 選ばれている項目の名前。右は矢印の分を空ける。
+            TextMeshProUGUI caption = BuildLabel(rect, "", 24f, Vector2.zero, TextColor, FontStyles.Normal);
+            Stretch(caption.rectTransform);
+            caption.margin = new Vector4(20f, 0f, 44f, 0f);
+
+            GameObject arrow = InstantiateNested(PrefabKind.Icon, rect);
+            arrow.name = "Arrow";
+            RectTransform arrowRect = (RectTransform)arrow.transform;
+            arrowRect.anchorMin = new Vector2(1f, 0.5f);
+            arrowRect.anchorMax = new Vector2(1f, 0.5f);
+            arrowRect.pivot = new Vector2(1f, 0.5f);
+            arrowRect.anchoredPosition = new Vector2(-16f, 0f);
+            arrowRect.sizeDelta = DropdownArrowSize;
+            RawImage arrowImage = arrow.GetComponent<RawImage>();
+            UIBuilder.SetIcon(arrowImage, IconType.ChevronDown);
+            UIBuilder.RecordOverrides(arrow, arrowRect, arrowImage);
+
+            // 一覧のひな形。本体のすぐ下に、同じ幅で出す。高さは、選択肢が少なければ TMP_Dropdown が縮める。
+            RectTransform template = CreateRect("Template", rect, Vector2.zero);
+            template.anchorMin = new Vector2(0f, 0f);
+            template.anchorMax = new Vector2(1f, 0f);
+            template.pivot = new Vector2(0.5f, 1f);
+            template.anchoredPosition = new Vector2(0f, -DropdownListGap);
+            template.sizeDelta = new Vector2(0f, DropdownListMaxHeight);
+            AddImage(template, GetMaterial(MaterialRole.Surface), true);
+
+            // 右は、スクロールバーの分を空ける。
+            float scrollbarSpace = DropdownListPadding + ScrollbarWidth + DropdownListPadding;
+            RectTransform viewport = CreateRect(UIBuilder.ScrollViewportName, template, Vector2.zero);
+            Stretch(viewport);
+            viewport.offsetMax = new Vector2(-scrollbarSpace, 0f);
+            viewport.gameObject.AddComponent<RectMask2D>();
+
+            // 項目を並べる場所。TMP_Dropdown は、ひな形での「中身と項目の大きさの差」を、一覧の上下の余白として使う。
+            RectTransform content = CreateRect(UIBuilder.ContentName, viewport, Vector2.zero);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = new Vector2(0f, DropdownItemHeight + DropdownListPadding * 2f);
+
+            // 項目のひな形。左だけ縁から離す（右は、スクロールバーの分がすでに空いている）。
+            RectTransform item = CreateRect("Item", content, Vector2.zero);
+            item.anchorMin = new Vector2(0f, 0.5f);
+            item.anchorMax = new Vector2(1f, 0.5f);
+            item.anchoredPosition = new Vector2(DropdownListPadding * 0.5f, 0f);
+            item.sizeDelta = new Vector2(-DropdownListPadding, DropdownItemHeight);
+
+            RectTransform itemBackgroundRect = CreateRect("Item Background", item, Vector2.zero);
+            Stretch(itemBackgroundRect);
+            Image itemBackground = AddImage(itemBackgroundRect, GetMaterial(MaterialRole.Track), true);
+
+            // 選ばれている項目に付くチェック。表示の切り替えは、uGUI の Toggle が行う。
+            GameObject check = InstantiateNested(PrefabKind.Icon, item);
+            check.name = "Item Checkmark";
+            RectTransform checkRect = (RectTransform)check.transform;
+            checkRect.anchorMin = new Vector2(0f, 0.5f);
+            checkRect.anchorMax = new Vector2(0f, 0.5f);
+            checkRect.pivot = new Vector2(0f, 0.5f);
+            checkRect.anchoredPosition = new Vector2(12f, 0f);
+            checkRect.sizeDelta = DropdownCheckSize;
+            RawImage checkImage = check.GetComponent<RawImage>();
+            UIBuilder.SetIcon(checkImage, IconType.Check);
+            UIBuilder.RecordOverrides(check, checkRect, checkImage);
+
+            TextMeshProUGUI itemLabel = BuildLabel(item, "Option", 22f, Vector2.zero, TextColor, FontStyles.Normal);
+            itemLabel.gameObject.name = "Item Label";
+            Stretch(itemLabel.rectTransform);
+            itemLabel.margin = new Vector4(40f, 0f, 8f, 0f);
+
+            // 項目の背景は、カーソルを当てたときと押したときだけ見せる。普段は透明にしておく。
+            Toggle itemToggle = item.gameObject.AddComponent<Toggle>();
+            SetupSelectable(itemToggle, itemBackground);
+            ColorBlock itemColors = itemToggle.colors;
+            itemColors.normalColor = new Color(1f, 1f, 1f, 0f);
+            itemColors.selectedColor = itemColors.normalColor;
+            itemToggle.colors = itemColors;
+            itemToggle.graphic = checkImage;
+            itemToggle.isOn = true;
+
+            // 一覧の角が丸いので、スクロールバーは縁から少し内側に置く。
+            Scrollbar scrollbar = BuildScrollbar(template);
+            RectTransform scrollbarRect = (RectTransform)scrollbar.transform;
+            scrollbarRect.anchoredPosition = new Vector2(-DropdownListPadding, 0f);
+            scrollbarRect.sizeDelta = new Vector2(ScrollbarWidth, -DropdownListPadding * 4f);
+            AddVerticalScroll(template, viewport, content, scrollbar);
+
+            // ひな形は、普段は表示しない。
+            template.gameObject.SetActive(false);
+
+            TMP_Dropdown dropdown = rect.gameObject.AddComponent<TMP_Dropdown>();
+            SetupSelectable(dropdown, background);
+            dropdown.template = template;
+            dropdown.captionText = caption;
+            dropdown.itemText = itemLabel;
+            dropdown.ClearOptions();
+            dropdown.AddOptions(new List<string> { "Option 1", "Option 2", "Option 3" });
+            dropdown.SetValueWithoutNotify(0);
+
+            DropdownControl control = rect.gameObject.AddUdonSharpComponent<DropdownControl>();
+            SerializedObject serializedControl = new SerializedObject(control);
+            serializedControl.FindProperty("dropdown").objectReferenceValue = dropdown;
+            serializedControl.ApplyModifiedPropertiesWithoutUndo();
+
+            AddInternalListener(dropdown.onValueChanged, control, nameof(DropdownControl._OnDropdownValueChanged));
+
+            SetLayoutWidth(rect, false);
             return rect.gameObject;
         }
 

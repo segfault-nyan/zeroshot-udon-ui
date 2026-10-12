@@ -143,6 +143,12 @@ namespace ZeroShotUdonUI.EditorTools
             AddElement(command, parent => UIBuilder.CreateStepper(parent, 0f, 10f, 1f, 0f), true);
         }
 
+        [MenuItem(MenuRoot + "ドロップダウン", false, ControlPriority + 9)]
+        private static void AddDropdown(MenuCommand command)
+        {
+            AddElement(command, parent => UIBuilder.CreateDropdown(parent, new[] { "Option 1", "Option 2", "Option 3" }, 0), true);
+        }
+
         [MenuItem(MenuRoot + "進捗バー", false, LabelPriority + 4)]
         private static void AddProgressBar(MenuCommand command)
         {
