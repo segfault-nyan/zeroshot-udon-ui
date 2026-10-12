@@ -27,6 +27,7 @@ UI を作るときに、必ず守ることです。`UIBuilder` を使えば、1 
 2. UI を組み立てるエディタ用スクリプトを書く。`Editor` という名前のフォルダの中に置く。
 3. 利用者に、Unity に戻ってメニューを実行するよう依頼する。
 4. 初回は、準備のための案内（ダイアログ）が出て、処理が止まることがある。利用者に、案内の処理が終わってから、もう一度メニューを実行してもらう。
+5. 作った UI に設定の誤りが無いかを、設定チェックで確かめる（下の「作った UI を確かめる」）。
 
 ## 最小の例
 
@@ -184,6 +185,32 @@ public static class SettingsUIBuilder
 | `void SetSize(Component element, Vector2 size)` | 要素の大きさ（mm）を変える。自動配置の中の要素に使う |
 | `void Place(Component element, Vector2 position)` | 要素の位置を、親の中央からのずれ（mm）で指定する。自動配置の外の要素に使う |
 | `void Place(Component element, Vector2 position, Vector2 size)` | 位置と大きさを指定する |
+
+## 作った UI を確かめる
+
+あなたは Unity の画面を見られないので、設定の誤りは「設定チェック」で確かめます。Canvas の設定、イベント名の打ち間違い（通知先に、その名前の `public` メソッドが無い）、タブの見出しとページの数の食い違いなどを見つけます。
+
+確かめ方は 2 つあります。
+
+**生成コードの最後で呼ぶ**
+
+```csharp
+// UI を組み立てた後に呼ぶ。結果は Console に出る。戻り値は、エラーと警告の合計数。
+int problemCount = SceneChecker.CheckAndLog();
+```
+
+その後、利用者に Console の内容を貼ってもらいます。`[ZeroShot Udon UI] 設定チェック` で始まる行が結果です。
+
+**利用者に画面を開いてもらう**
+
+> メニューの `Tools > ZeroShot Udon UI > 設定チェック` を開き、「Console に書き出す」を押して、Console の内容を貼ってください。
+
+| 関数 | 内容 |
+|---|---|
+| `int SceneChecker.CheckAndLog()` | 開いているシーンを調べ、結果を Console に書き出す。エラーと警告の合計数を返す |
+| `List<CheckIssue> SceneChecker.Check()` | 開いているシーンを調べ、見つかった問題を返す。`Severity`（`Error`、`Warning`、`Info`）、`Message`、`Advice`、`Target` を持つ |
+
+イベント名は、文字列で直接書かずに `nameof(クラス名.メソッド名)` で書くと、打ち間違いがコンパイルの時点で分かります。
 
 ## 配置の考え方
 
