@@ -32,7 +32,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: パッケージの zip を作る
         id: package
@@ -67,7 +67,7 @@ jobs:
           done
 
       - id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: 一覧と導入ページを作る
         run: >
@@ -77,9 +77,9 @@ jobs:
           --repository "$GITHUB_REPOSITORY"
           --output site
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

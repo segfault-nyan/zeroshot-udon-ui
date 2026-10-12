@@ -1,6 +1,6 @@
 # ZeroShot Udon UI 設計素案
 
-- 版：0.27（素案）
+- 版：0.28（素案）
 - 作成日：2026-10-11
 - 状態：未承認。この文書の内容はすべて提案であり、承認された項目から実装に進む。
 
@@ -164,7 +164,7 @@ AI 生成ワールドでは、UI を組み込む作業も AI が行う。AI は 
 
 | ID | 機能 | 内容 | 優先度 | 状態 | 成果物 |
 |---|---|---|---|---|---|
-| DST-01 | 配布形式 | VCC から導入できる形式（VPM）のパッケージにする（Q-02）。パッケージの形への移動（8.1、8.6）、利用者の設定の保存（EDT-07）、公開の仕組み（8.8）は実施済み。最初の版の公開と、VCC からの導入の確認は未了 | P2 | 実装中 | `package.json`、`Runtime/ZeroShotUdonUI.Runtime.asmdef`、`Editor/ZeroShotUdonUI.Editor.asmdef`、`Samples/ZeroShotUdonUI.Samples.asmdef`。リポジトリの最上位に `.github/workflows/release.yml`、`.github/scripts/release.py`、`Docs/RELEASE.md` |
+| DST-01 | 配布形式 | VCC から導入できる形式（VPM）のパッケージにする（Q-02）。パッケージの形への移動（8.1、8.6）、利用者の設定の保存（EDT-07）、公開の仕組み（8.8）は実施済み。最初の版 `0.1.0` を公開し、新しいプロジェクトに VCC から導入して動くことを確認済み（2026-10-12） | P2 | 完了 | `package.json`、`Runtime/ZeroShotUdonUI.Runtime.asmdef`、`Editor/ZeroShotUdonUI.Editor.asmdef`、`Samples/ZeroShotUdonUI.Samples.asmdef`。リポジトリの最上位に `.github/workflows/release.yml`、`.github/scripts/release.py`、`Docs/RELEASE.md` |
 | DST-02 | 導入手順書 | 導入から最初の UI を置くまでの手順。Udon との連携、テーマ、フォント（ライセンスの記載と、文字の補完が働く条件を含む）、更新時の動きも案内する。VCC に追加する URL は公開時に記載する | P2 | 完了 | `README.md` |
 | DST-03 | 部品リファレンス | 各部品の設定項目とイベントの一覧 | P2 | 完了 | `Documentation~/Reference.md` |
 | DST-04 | ライセンス表記 | ツールキット自体のライセンス（MIT）と、フォントに関する第三者のライセンスを明記する（Q-07） | P2 | 完了 | `LICENSE.md`、`Editor/Fonts/THIRD-PARTY-NOTICES.txt` |
@@ -594,3 +594,4 @@ Noto Sans JP を 4096 x 2048 の画像で生成した場合、収録は 2,732 �
 | 0.25 | 2026-10-12 | EDT-07（設定の保存と復元）を追加して実装。8.7 を追加し、9.4 と 12.1 に反映 |
 | 0.26 | 2026-10-12 | 文書とライセンスを追加（DST-02〜05 を完了に更新）。導入手順書、部品リファレンス、AI エージェント向け利用ガイド、変更履歴、MIT ライセンスの本文 |
 | 0.27 | 2026-10-12 | 公開の仕組みを追加（8.8）。GitHub の自動処理、導入ページ、公開の手順書。公開にあたり、`Assets/` の下を git の管理から外し、履歴を作り直した |
+| 0.28 | 2026-10-12 | 最初の版 `0.1.0` を公開し、VCC からの導入を確認。DST-01 を完了に更新。自動処理が使う GitHub 公式の部品を、新しい実行環境（Node.js 24）向けの版に上げた |
