@@ -2,6 +2,7 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 // SYS-06
 namespace ZeroShotUdonUI
@@ -14,6 +15,7 @@ namespace ZeroShotUdonUI
     /// 無効になっている部品にも、ほかのスクリプトからの呼び出しは届くので、受け取った値はすぐに部品へ渡せる。
     ///
     /// 値は数値1つで持つ。オン・オフは 0 と 1、選択肢は番号として扱い、どの部品にも同じスクリプトを使う。
+    /// 値を持たない部品（ボタン）では、「押された」という出来事だけを全員に伝える。
     /// </summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class SyncRelay : UdonSharpBehaviour
@@ -54,6 +56,23 @@ namespace ZeroShotUdonUI
                 return;
 
             control._OnSyncedValue();
+        }
+
+        /// <summary>
+        /// 部品から呼ばれる。自分の手元も含めた全員に、「操作された」という出来事を伝える。
+        /// 後から入ってきた人には伝わらない。
+        /// </summary>
+        public void SendEvent()
+        {
+            SendCustomNetworkEvent(NetworkEventTarget.All, nameof(OnNetworkEvent));
+        }
+
+        // SendEvent から、全員の手元で呼ばれる。ネットワーク経由で呼ぶので、名前を _ で始めず public にする。
+        // ほかの人が勝手に呼ぶこともできるが、部品の通知を送るだけなので害は無い。
+        public void OnNetworkEvent()
+        {
+            if (control != null)
+                control._OnSyncedEvent();
         }
     }
 }

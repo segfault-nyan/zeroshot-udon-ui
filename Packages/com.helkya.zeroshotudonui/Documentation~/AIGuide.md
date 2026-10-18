@@ -19,7 +19,7 @@ UI を作るときに、必ず守ることです。`UIBuilder` を使えば、1 
 4. 実行時のスクリプトは、UdonSharp（`UdonSharpBehaviour`）で書きます。通常の C# より、使える機能と API が少ないことに注意します。
 5. 一度も有効になっていないオブジェクトのスクリプトは、初期化（`Start`）と、VRChat が呼び出すイベント（`OnPlayerJoined` など）が実行されません。ほかのスクリプトからの呼び出しと、部品からの通知は受け取れます。操作を受け取るスクリプトは、常に有効なオブジェクトに付けます。ウィンドウの中には付けません。
 6. Canvas、ウィンドウ、確認ダイアログを、別の Canvas の中に置きません。縮尺が二重に掛かります。
-7. 部品は同期しません。操作の結果は、操作した本人にだけ反映されます。
+7. 部品は、初期の設定では同期しません。全員に反映したい部品は、`UIBuilder.SetSynced(部品, true)` で同期を有効にします（下の「全員で同じ値にする」）。同期のコードを、自分で書く必要はありません。
 
 ## 作業の流れ
 
@@ -172,6 +172,8 @@ public static class SettingsUIBuilder
 |---|---|
 | `void SetEvent(ControlBase control, UdonSharpBehaviour target, string eventName)` | 部品が操作されたときの通知先と、呼び出すメソッドの名前を設定する。`target` に `UdonBehaviour` を取る形もある |
 | `void SetCancelEvent(ConfirmDialog dialog, string eventName)` | 確認ダイアログで「いいえ」が押されたときに呼び出すメソッドの名前を設定する。通知先は `SetEvent` と共通 |
+| `void SetSynced(ControlBase control, bool synced)` | 操作の結果を、インスタンス内の全員に反映するかを設定する。対応するのは、トグルスイッチ、チェックボックス、スライダー、数値ステッパー、選択ボタン群、ドロップダウン、ボタン |
+| `bool IsSyncable(ControlBase control)` | 同期に対応する部品なら `true` |
 
 `ButtonControl`、`ToggleSwitch`、`CheckboxControl`、`SliderControl`、`StepperControl`、`SegmentedControl`、`DropdownControl`、`WindowPanel`、`TabView`、`ConfirmDialog` は、どれも `ControlBase` です。`ConfirmDialog` に `SetEvent` で設定するのは、「はい」が押されたときの通知です。`ProgressBar` は操作できない部品なので、`ControlBase` ではなく、イベントも設定できません。
 
@@ -185,6 +187,33 @@ public static class SettingsUIBuilder
 | `void SetSize(Component element, Vector2 size)` | 要素の大きさ（mm）を変える。自動配置の中の要素に使う |
 | `void Place(Component element, Vector2 position)` | 要素の位置を、親の中央からのずれ（mm）で指定する。自動配置の外の要素に使う |
 | `void Place(Component element, Vector2 position, Vector2 size)` | 位置と大きさを指定する |
+
+## 全員で同じ値にする
+
+ワールドの状態（照明、音楽、ゲームの設定など）を全員で共有する UI では、部品の同期を有効にします。
+
+```csharp
+ToggleSwitch lightToggle = UIBuilder.CreateToggle(content, true);
+UIBuilder.CreateSettingRow(content, "Room light", lightToggle);
+UIBuilder.SetEvent(lightToggle, controller, nameof(RoomController.OnLightToggled));
+UIBuilder.SetSynced(lightToggle, true);   // 全員で同期する
+```
+
+```csharp
+// 通知先のスクリプト。同期のコードは要らない。
+// 誰が操作しても、後から入ってきても、全員の手元でこのメソッドが呼ばれる。
+public void OnLightToggled()
+{
+    roomLight.SetActive(lightToggle.IsOn);
+}
+```
+
+- **通知を受けたら、部品から値を読み、その値に合わせてワールドの状態を整えます。** 「切り替わったら反転する」のように、前の状態に頼る書き方はしません。後から入ってきた人の手元では、通知が 1 回だけ届くためです。
+- 通知先のスクリプトは、同期しない設定（`[UdonBehaviourSyncMode(BehaviourSyncMode.None)]`）のままで構いません。
+- `SetValue` は、呼んだ人の値を全員に送ります。`SetValueWithoutNotify` は手元だけを変え、送りません。
+- ボタンを同期すると、押したときの処理が全員の手元で動きます。後から入ってきた人には届きません。後から入った人にも反映したい状態は、ボタンではなく、トグルスイッチなどの値で持ちます。
+- 同期を有効にすると、シーンの最上位に `ZS Sync` ができます。これを消したり、無効にしたりしません。
+- 人ごとの設定（音量、表示言語など）は、同期しません。
 
 ## 作った UI を確かめる
 
@@ -282,4 +311,5 @@ UdonSharp のスクリプトから、部品の値を読み書きできます。�
 次の部品と機能は、この版にはありません。必要な場合は、uGUI で自作するか、利用者に相談します。
 
 - テキスト入力
-- 同期、効果音、開閉などのアニメーション
+- 効果音、開閉などのアニメーション
+- 同期した部品を、操作できる人を制限する機能

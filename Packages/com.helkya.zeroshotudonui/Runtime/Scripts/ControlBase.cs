@@ -44,9 +44,17 @@ namespace ZeroShotUdonUI
 
         /// <summary>
         /// 中継役から、ほかの人が送った値を受け取ったときに呼ばれる。値は syncRelay.Value で読む。
-        /// 同期に対応する部品は、これを上書きして、表示を合わせて通知を送る。
+        /// 値を持つ部品は、これを上書きして、表示を合わせて通知を送る。
         /// </summary>
         public virtual void _OnSyncedValue()
+        {
+        }
+
+        /// <summary>
+        /// 中継役から、誰かが操作したという出来事を受け取ったときに呼ばれる。操作した本人の手元でも呼ばれる。
+        /// 値を持たない部品（ボタン）は、これを上書きして通知を送る。
+        /// </summary>
+        public virtual void _OnSyncedEvent()
         {
         }
     }

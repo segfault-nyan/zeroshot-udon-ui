@@ -17,6 +17,7 @@ namespace ZeroShotUdonUI.EditorTools
         private const int ContainerPriority = 10;
         private const int ControlPriority = 30;
         private const int LabelPriority = 52;
+        private const int SyncPriority = 70;
 
         private static readonly Vector2 DefaultCanvasSize = new Vector2(600f, 400f);
         private static readonly Vector2 DefaultDialogSize = new Vector2(480f, 260f);
@@ -177,6 +178,54 @@ namespace ZeroShotUdonUI.EditorTools
         private static void AddCaptionLabel(MenuCommand command)
         {
             AddElement(command, parent => UIBuilder.CreateLabel(parent, "Label", LabelStyle.Caption), false);
+        }
+
+        // 選択中の部品を、同期する（全員に反映する）ようにする。SYS-06
+        [MenuItem(MenuRoot + "選択中の部品を同期する", false, SyncPriority)]
+        private static void EnableSync(MenuCommand command)
+        {
+            SetSync(command.context as GameObject, true);
+        }
+
+        [MenuItem(MenuRoot + "選択中の部品を同期する", true)]
+        private static bool CanEnableSync()
+        {
+            ControlBase control = FindSyncableControl(Selection.activeGameObject);
+            return control != null && !control.IsSynced;
+        }
+
+        [MenuItem(MenuRoot + "選択中の部品を同期しない", false, SyncPriority + 1)]
+        private static void DisableSync(MenuCommand command)
+        {
+            SetSync(command.context as GameObject, false);
+        }
+
+        [MenuItem(MenuRoot + "選択中の部品を同期しない", true)]
+        private static bool CanDisableSync()
+        {
+            ControlBase control = FindSyncableControl(Selection.activeGameObject);
+            return control != null && control.IsSynced;
+        }
+
+        // 複数のオブジェクトを選んでいる場合は、1つずつ呼ばれる。
+        private static void SetSync(GameObject target, bool synced)
+        {
+            if (!UIBuilder.EnsureSetup())
+                return;
+
+            ControlBase control = FindSyncableControl(target);
+            if (control != null)
+                UIBuilder.SetSynced(control, synced);
+        }
+
+        // 選んだオブジェクトそのものに付いている、同期に対応する部品を返す。子は探さない（ウィンドウの閉じるボタンなどを誤って選ばないため）。
+        private static ControlBase FindSyncableControl(GameObject target)
+        {
+            if (target == null)
+                return null;
+
+            ControlBase control = target.GetComponent<ControlBase>();
+            return control != null && UIBuilder.IsSyncable(control) ? control : null;
         }
 
         private static void AddElement(MenuCommand command, System.Func<Transform, Component> create, bool isControl)

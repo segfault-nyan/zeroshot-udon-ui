@@ -786,9 +786,9 @@ namespace ZeroShotUdonUI.EditorTools
         }
 
         /// <summary>
-        /// 操作の結果を、インスタンス内の全員に反映するかを設定する（SYS-06）。同期に対応する部品だけで使える。
+        /// 操作の結果を、インスタンス内の全員に反映するかを設定する（SYS-06）。同期に対応する部品だけで使える（IsSyncable）。
         /// 同期する場合は、中継役（SyncRelay）を作って部品とつなぐ。中継役は、シーンの最上位の「ZS Sync」の下に置く。
-        /// 同期しない場合は、中継役を消す。
+        /// 同期しない場合は、中継役を消す。どちらも、取り消し（Ctrl+Z）に登録する。
         /// </summary>
         public static void SetSynced(ControlBase control, bool synced)
         {
@@ -805,8 +805,8 @@ namespace ZeroShotUdonUI.EditorTools
                     return;
 
                 relayProperty.objectReferenceValue = null;
-                serializedControl.ApplyModifiedPropertiesWithoutUndo();
-                Object.DestroyImmediate(current.gameObject);
+                serializedControl.ApplyModifiedProperties();
+                Undo.DestroyObjectImmediate(current.gameObject);
                 return;
             }
 
@@ -815,6 +815,7 @@ namespace ZeroShotUdonUI.EditorTools
 
             GameObject relayObject = new GameObject(control.gameObject.name + " Sync");
             relayObject.transform.SetParent(GetSyncRoot(control.gameObject.scene).transform, false);
+            Undo.RegisterCreatedObjectUndo(relayObject, "Sync " + control.gameObject.name);
 
             SyncRelay relay = relayObject.AddUdonSharpComponent<SyncRelay>();
             SerializedObject serializedRelay = new SerializedObject(relay);
@@ -827,7 +828,7 @@ namespace ZeroShotUdonUI.EditorTools
             backing.hideFlags |= HideFlags.HideInInspector;
 
             relayProperty.objectReferenceValue = relay;
-            serializedControl.ApplyModifiedPropertiesWithoutUndo();
+            serializedControl.ApplyModifiedProperties();
         }
 
         // 同期の中継役をまとめて置く、シーンの最上位のオブジェクトを返す。無ければ作る。
@@ -842,6 +843,7 @@ namespace ZeroShotUdonUI.EditorTools
 
             GameObject created = new GameObject(SyncRootName);
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(created, scene);
+            Undo.RegisterCreatedObjectUndo(created, "Create " + SyncRootName);
             return created;
         }
 
@@ -850,7 +852,13 @@ namespace ZeroShotUdonUI.EditorTools
         /// </summary>
         public static bool IsSyncable(ControlBase control)
         {
-            return control is ToggleSwitch;
+            return control is ToggleSwitch
+                || control is CheckboxControl
+                || control is SliderControl
+                || control is StepperControl
+                || control is SegmentedControl
+                || control is DropdownControl
+                || control is ButtonControl;
         }
 
         /// <summary>

@@ -25,7 +25,14 @@ namespace ZeroShotUdonUI.EditorTools
 
         private void OnEnable()
         {
+            // Hierarchy でオブジェクトを足したり消したりしたときに、一覧を新しくする。
+            EditorApplication.hierarchyChanged += Refresh;
             Refresh();
+        }
+
+        private void OnDisable()
+        {
+            EditorApplication.hierarchyChanged -= Refresh;
         }
 
         // ほかの画面で直してから戻ってきたときに、結果を新しくする。

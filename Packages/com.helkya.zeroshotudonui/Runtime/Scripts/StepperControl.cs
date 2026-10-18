@@ -5,12 +5,13 @@ using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
 
-// CMP-08・SYS-02
+// CMP-08・SYS-02・SYS-06
 namespace ZeroShotUdonUI
 {
     /// <summary>
     /// 数値ステッパー。＋と－のボタンで数値を増減する。
     /// 対応する uGUI の部品が無いので、値はこのスクリプトが持つ。値が変わると通知先にイベントを送る。
+    /// 同期する設定（中継役あり）のときは、変えた値をインスタンス内の全員に送り、受け取った側でも通知先にイベントを送る。
     /// </summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class StepperControl : ControlBase
@@ -39,17 +40,20 @@ namespace ZeroShotUdonUI
             ApplyVisual();
         }
 
-        /// <summary>値を変更する。実際に変わった場合は通知先にイベントを送る。範囲外の値は範囲内に丸められる。</summary>
+        /// <summary>値を変更する。実際に変わった場合は通知先にイベントを送る。範囲外の値は範囲内に丸められる。同期する設定なら、全員に送る。</summary>
         public void SetValue(float newValue)
         {
             float before = currentValue;
             SetValueWithoutNotify(newValue);
 
-            if (currentValue != before)
-                Notify();
+            if (currentValue == before)
+                return;
+
+            SendToOthers(currentValue);
+            Notify();
         }
 
-        /// <summary>通知を出さずに値を変更する。</summary>
+        /// <summary>通知を出さずに値を変更する。手元だけで変わり、ほかの人には送らない。</summary>
         public void SetValueWithoutNotify(float newValue)
         {
             currentValue = Snap(newValue);
@@ -66,6 +70,17 @@ namespace ZeroShotUdonUI
         public void _OnIncrease()
         {
             SetValue(currentValue + step);
+        }
+
+        // 中継役から、ほかの人が送った値を受け取ったときに呼ばれる。
+        public override void _OnSyncedValue()
+        {
+            float value = Snap(syncRelay.Value);
+            if (value == currentValue)
+                return;
+
+            SetValueWithoutNotify(value);
+            Notify();
         }
 
         // 範囲内に収め、最小値から数えて増減の幅の倍数になるよう丸める。増減を繰り返しても誤差が溜まらない。

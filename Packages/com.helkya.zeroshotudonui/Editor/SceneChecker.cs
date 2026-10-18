@@ -105,6 +105,12 @@ namespace ZeroShotUdonUI.EditorTools
 
                     foreach (SegmentedControl segmented in root.GetComponentsInChildren<SegmentedControl>(true))
                         CheckSegmented(segmented, issues);
+
+                    foreach (ControlBase control in root.GetComponentsInChildren<ControlBase>(true))
+                        CheckSync(control, issues);
+
+                    foreach (SyncRelay relay in root.GetComponentsInChildren<SyncRelay>(true))
+                        CheckRelay(relay, issues);
                 }
             }
 
@@ -423,6 +429,98 @@ namespace ZeroShotUdonUI.EditorTools
                 Add(issues, CheckSeverity.Warning, segmented.gameObject,
                     "選択ボタン群で、最初に選ばれている選択肢が " + onCount + " 個あります。",
                     "選択肢の Toggle の Is On を、1 つだけオンにしてください。");
+            }
+        }
+
+        // 同期する部品が、正しい中継役とつながっていて、中継役が動ける状態かを調べる。SYS-06
+        private static void CheckSync(ControlBase control, List<CheckIssue> issues)
+        {
+            SerializedProperty relayProperty = new SerializedObject(control).FindProperty("syncRelay");
+            SyncRelay relay = relayProperty.objectReferenceValue as SyncRelay;
+
+            // 中継役のオブジェクトを消すと、部品の側には「消えたものへの参照」が残る。
+            // 実行時には同期しない部品として扱われ、黙って同期しなくなるので、必ず知らせる。
+            if (relay == null && relayProperty.objectReferenceInstanceIDValue != 0)
+            {
+                Add(issues, CheckSeverity.Error, control.gameObject,
+                    "同期の中継役が見つかりません（消された可能性があります）。この部品は同期しません。",
+                    "同期させるなら、中継役を作り直してください。同期させないなら、Sync Relay を空にしてください。",
+                    () =>
+                    {
+                        ClearRelay(control);
+                        UIBuilder.SetSynced(control, true);
+                    });
+                return;
+            }
+
+            if (relay == null)
+                return;
+
+            if (!UIBuilder.IsSyncable(control))
+            {
+                Add(issues, CheckSeverity.Error, control.gameObject,
+                    "同期に対応していない部品（" + control.GetType().Name + "）に、同期の中継役が設定されています。",
+                    "この部品の Sync Relay を空にしてください。",
+                    () => ClearRelay(control));
+                return;
+            }
+
+            ControlBase relayControl = new SerializedObject(relay).FindProperty("control").objectReferenceValue as ControlBase;
+            if (relayControl != control)
+            {
+                Add(issues, CheckSeverity.Error, control.gameObject,
+                    "同期の中継役（" + relay.name + "）が、別の部品とつながっています。この部品の操作は、ほかの人に正しく届きません。",
+                    "この部品の同期を一度無効にしてから、もう一度有効にしてください（Hierarchy の右クリックの ZeroShot Udon UI から）。",
+                    () =>
+                    {
+                        ClearRelay(control);
+                        UIBuilder.SetSynced(control, true);
+                    });
+                return;
+            }
+
+            if (!relay.gameObject.activeInHierarchy)
+            {
+                Add(issues, CheckSeverity.Error, relay.gameObject,
+                    "同期の中継役（" + relay.name + "）が無効になっています。VRChat の同期は、無効なオブジェクトでは止まります。",
+                    "「" + UIBuilder.SyncRootName + "」と、その中のオブジェクトを有効にしてください。",
+                    () => Activate(relay.transform));
+            }
+        }
+
+        // 部品とつながっていない中継役を探す。部品を消したときや、同期を無効にし損ねたときに残る。
+        private static void CheckRelay(SyncRelay relay, List<CheckIssue> issues)
+        {
+            ControlBase control = new SerializedObject(relay).FindProperty("control").objectReferenceValue as ControlBase;
+            SyncRelay controlRelay = control != null
+                ? new SerializedObject(control).FindProperty("syncRelay").objectReferenceValue as SyncRelay
+                : null;
+            if (controlRelay == relay)
+                return;
+
+            Add(issues, CheckSeverity.Warning, relay.gameObject,
+                "使われていない同期の中継役（" + relay.name + "）があります。通信の負荷が少し増えます。",
+                "このオブジェクトを消してください。",
+                () => Undo.DestroyObjectImmediate(relay.gameObject));
+        }
+
+        private static void ClearRelay(ControlBase control)
+        {
+            SerializedObject serializedControl = new SerializedObject(control);
+            serializedControl.FindProperty("syncRelay").objectReferenceValue = null;
+            serializedControl.ApplyModifiedProperties();
+        }
+
+        // 対象と、その親をすべて有効にする。
+        private static void Activate(Transform target)
+        {
+            for (Transform current = target; current != null; current = current.parent)
+            {
+                if (current.gameObject.activeSelf)
+                    continue;
+
+                Undo.RecordObject(current.gameObject, UndoName);
+                current.gameObject.SetActive(true);
             }
         }
 
