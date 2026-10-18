@@ -95,6 +95,9 @@ namespace ZeroShotUdonUI.EditorTools
         internal const string WindowTitleName = "Title";
         internal const string ContentName = "Content";
 
+        // 同期の中継役をまとめて置く、シーンの最上位のオブジェクトの名前。
+        internal const string SyncRootName = "ZS Sync";
+
         // 中身の領域と、パネルの縁との間隔。
         internal const float ContentPadding = 40f;
 
@@ -783,6 +786,74 @@ namespace ZeroShotUdonUI.EditorTools
         }
 
         /// <summary>
+        /// 操作の結果を、インスタンス内の全員に反映するかを設定する（SYS-06）。同期に対応する部品だけで使える。
+        /// 同期する場合は、中継役（SyncRelay）を作って部品とつなぐ。中継役は、シーンの最上位の「ZS Sync」の下に置く。
+        /// 同期しない場合は、中継役を消す。
+        /// </summary>
+        public static void SetSynced(ControlBase control, bool synced)
+        {
+            if (!IsSyncable(control))
+                throw new System.ArgumentException("'" + control.GetType().Name + "' は同期に対応していません。", nameof(control));
+
+            SerializedObject serializedControl = new SerializedObject(control);
+            SerializedProperty relayProperty = serializedControl.FindProperty("syncRelay");
+            SyncRelay current = relayProperty.objectReferenceValue as SyncRelay;
+
+            if (!synced)
+            {
+                if (current == null)
+                    return;
+
+                relayProperty.objectReferenceValue = null;
+                serializedControl.ApplyModifiedPropertiesWithoutUndo();
+                Object.DestroyImmediate(current.gameObject);
+                return;
+            }
+
+            if (current != null)
+                return;
+
+            GameObject relayObject = new GameObject(control.gameObject.name + " Sync");
+            relayObject.transform.SetParent(GetSyncRoot(control.gameObject.scene).transform, false);
+
+            SyncRelay relay = relayObject.AddUdonSharpComponent<SyncRelay>();
+            SerializedObject serializedRelay = new SerializedObject(relay);
+            serializedRelay.FindProperty("control").objectReferenceValue = control;
+            serializedRelay.ApplyModifiedPropertiesWithoutUndo();
+
+            // 同期の設定は、スクリプトの指定（Manual）に合わせて UdonSharp が直すが、すぐに使えるよう、ここでも合わせておく。
+            UdonBehaviour backing = UdonSharpEditorUtility.GetBackingUdonBehaviour(relay);
+            backing.SyncMethod = VRC.SDKBase.Networking.SyncType.Manual;
+            backing.hideFlags |= HideFlags.HideInInspector;
+
+            relayProperty.objectReferenceValue = relay;
+            serializedControl.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // 同期の中継役をまとめて置く、シーンの最上位のオブジェクトを返す。無ければ作る。
+        // ここを無効にすると、同期が止まる。
+        private static GameObject GetSyncRoot(UnityEngine.SceneManagement.Scene scene)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root.name == SyncRootName)
+                    return root;
+            }
+
+            GameObject created = new GameObject(SyncRootName);
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(created, scene);
+            return created;
+        }
+
+        /// <summary>
+        /// 同期に対応する部品なら true。
+        /// </summary>
+        public static bool IsSyncable(ControlBase control)
+        {
+            return control is ToggleSwitch;
+        }
+
+        /// <summary>
         /// 要素の位置を、親の中央からのずれで指定する。
         /// </summary>
         public static void Place(Component element, Vector2 position)
@@ -862,6 +933,7 @@ namespace ZeroShotUdonUI.EditorTools
                 typeof(TabView),
                 typeof(ConfirmDialog),
                 typeof(DropdownControl),
+                typeof(SyncRelay),
             };
             behaviours.AddRange(extraBehaviours);
 

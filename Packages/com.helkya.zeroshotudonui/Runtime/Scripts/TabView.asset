@@ -43,7 +43,7 @@ MonoBehaviour:
       Data: 
     - Name: 
       Entry: 12
-      Data: 4
+      Data: 5
     - Name: 
       Entry: 7
       Data: 
@@ -188,19 +188,19 @@ MonoBehaviour:
       Data: 
     - Name: $k
       Entry: 1
-      Data: header
+      Data: syncRelay
     - Name: $v
       Entry: 7
       Data: 12|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
     - Name: <Name>k__BackingField
       Entry: 1
-      Data: header
+      Data: syncRelay
     - Name: <UserType>k__BackingField
       Entry: 7
       Data: 13|System.RuntimeType, mscorlib
     - Name: 
       Entry: 1
-      Data: ZeroShotUdonUI.SegmentedControl, ZeroShotUdonUI.Runtime
+      Data: ZeroShotUdonUI.SyncRelay, ZeroShotUdonUI.Runtime
     - Name: 
       Entry: 8
       Data: 
@@ -230,7 +230,8 @@ MonoBehaviour:
       Data: 15|UnityEngine.TooltipAttribute, UnityEngine.CoreModule
     - Name: tooltip
       Entry: 1
-      Data: "\u898B\u51FA\u3057\u306B\u306A\u308B\u9078\u629E\u30DC\u30BF\u30F3\u7FA4"
+      Data: "\u540C\u671F\u306E\u4E2D\u7D99\u5F79\u3002\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u308C\u3070\u3001\u64CD\u4F5C\u306E\u7D50\u679C\u304C\u30A4\u30F3\u30B9\u30BF\u30F3\u30B9\u5185\u306E\u5168\u54E1\u306B\u53CD\u6620\u3055\u308C\u308B\u3002UIBuilder.SetSynced
+        \u3067\u8A2D\u5B9A\u3059\u308B"
     - Name: 
       Entry: 8
       Data: 
@@ -257,25 +258,25 @@ MonoBehaviour:
       Data: 
     - Name: $k
       Entry: 1
-      Data: pageContainer
+      Data: header
     - Name: $v
       Entry: 7
       Data: 17|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
     - Name: <Name>k__BackingField
       Entry: 1
-      Data: pageContainer
+      Data: header
     - Name: <UserType>k__BackingField
       Entry: 7
       Data: 18|System.RuntimeType, mscorlib
     - Name: 
       Entry: 1
-      Data: UnityEngine.Transform, UnityEngine.CoreModule
+      Data: ZeroShotUdonUI.SegmentedControl, ZeroShotUdonUI.Runtime
     - Name: 
       Entry: 8
       Data: 
     - Name: <SystemType>k__BackingField
       Entry: 9
-      Data: 18
+      Data: 3
     - Name: <SyncMode>k__BackingField
       Entry: 7
       Data: System.Nullable`1[[UdonSharp.UdonSyncMode, UdonSharp.Runtime]], mscorlib
@@ -299,13 +300,82 @@ MonoBehaviour:
       Data: 20|UnityEngine.TooltipAttribute, UnityEngine.CoreModule
     - Name: tooltip
       Entry: 1
-      Data: "\u30DA\u30FC\u30B8\u3092\u5B50\u306B\u6301\u3064\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u3002\u5B50\u306E\u4E26\u3073\u9806\u304C\u3001\u898B\u51FA\u3057\u306E\u9806\u756A\u306B\u5BFE\u5FDC\u3059\u308B"
+      Data: "\u898B\u51FA\u3057\u306B\u306A\u308B\u9078\u629E\u30DC\u30BF\u30F3\u7FA4"
     - Name: 
       Entry: 8
       Data: 
     - Name: 
       Entry: 7
       Data: 21|UnityEngine.SerializeField, UnityEngine.CoreModule
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 1
+      Data: pageContainer
+    - Name: $v
+      Entry: 7
+      Data: 22|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
+    - Name: <Name>k__BackingField
+      Entry: 1
+      Data: pageContainer
+    - Name: <UserType>k__BackingField
+      Entry: 7
+      Data: 23|System.RuntimeType, mscorlib
+    - Name: 
+      Entry: 1
+      Data: UnityEngine.Transform, UnityEngine.CoreModule
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: <SystemType>k__BackingField
+      Entry: 9
+      Data: 23
+    - Name: <SyncMode>k__BackingField
+      Entry: 7
+      Data: System.Nullable`1[[UdonSharp.UdonSyncMode, UdonSharp.Runtime]], mscorlib
+    - Name: 
+      Entry: 6
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: <IsSerialized>k__BackingField
+      Entry: 5
+      Data: true
+    - Name: _fieldAttributes
+      Entry: 7
+      Data: 24|System.Collections.Generic.List`1[[System.Attribute, mscorlib]], mscorlib
+    - Name: 
+      Entry: 12
+      Data: 2
+    - Name: 
+      Entry: 7
+      Data: 25|UnityEngine.TooltipAttribute, UnityEngine.CoreModule
+    - Name: tooltip
+      Entry: 1
+      Data: "\u30DA\u30FC\u30B8\u3092\u5B50\u306B\u6301\u3064\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u3002\u5B50\u306E\u4E26\u3073\u9806\u304C\u3001\u898B\u51FA\u3057\u306E\u9806\u756A\u306B\u5BFE\u5FDC\u3059\u308B"
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 26|UnityEngine.SerializeField, UnityEngine.CoreModule
     - Name: 
       Entry: 8
       Data: 
