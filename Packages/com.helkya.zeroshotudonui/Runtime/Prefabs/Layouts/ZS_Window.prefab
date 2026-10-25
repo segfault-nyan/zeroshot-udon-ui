@@ -58,6 +58,7 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 7756097332271986909}
   eventTarget: {fileID: 0}
   eventName: 
+  syncRelay: {fileID: 0}
   content: {fileID: 210390588527877056}
 --- !u!114 &7756097332271986909
 MonoBehaviour:
@@ -342,11 +343,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2989139498079559419, guid: 391dc6097017a3c4a845fad51449014c, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 0
+      value: 64
       objectReference: {fileID: 0}
     - target: {fileID: 2989139498079559419, guid: 391dc6097017a3c4a845fad51449014c, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 64
       objectReference: {fileID: 0}
     - target: {fileID: 2989139498079559419, guid: 391dc6097017a3c4a845fad51449014c, type: 3}
       propertyPath: m_LocalPosition.x

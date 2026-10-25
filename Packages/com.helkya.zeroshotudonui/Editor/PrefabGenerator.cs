@@ -13,7 +13,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using VRC.Udon;
 
-// FND-04・FND-05・FND-08・LAY-01・LAY-03・LAY-04・LAY-05・LAY-06・LAY-07・CMP-01・CMP-03・CMP-04・CMP-05・CMP-06・CMP-07・CMP-08・CMP-09・CMP-11
+// FND-02・FND-04・FND-05・FND-08・LAY-01・LAY-03・LAY-04・LAY-05・LAY-06・LAY-07・CMP-01・CMP-03・CMP-04・CMP-05・CMP-06・CMP-07・CMP-08・CMP-09・CMP-11
 namespace ZeroShotUdonUI.EditorTools
 {
     internal enum PrefabKind
@@ -123,6 +123,21 @@ namespace ZeroShotUdonUI.EditorTools
         internal const string RadiusProperty = "_Radius";
         internal const string BorderWidthProperty = "_BorderWidth";
         internal const string BorderColorProperty = "_BorderColor";
+
+        // 影（FND-02）のプロパティ名。
+        internal const string ShadowMarginProperty = "_ShadowMargin";
+        internal const string ShadowColorProperty = "_ShadowColor";
+        internal const string ShadowBlurProperty = "_ShadowBlur";
+        internal const string ShadowOffsetProperty = "_ShadowOffset";
+
+        // 影を描く帯の幅（Canvas 単位）。影を付ける要素は、描く範囲をこの幅だけ外に広げて置く。
+        // 置き済みの UI の配置に関わるので、テーマ設定では変えられないようにしている。
+        internal const float ShadowMargin = 32f;
+
+        // 影の初期値。
+        private static readonly Color ShadowColor = new Color(0f, 0f, 0f, 0.35f);
+        private const float ShadowBlur = 24f;
+        private static readonly Vector2 ShadowOffset = new Vector2(0f, -6f);
 
         // アイコンのシェーダー（FND-07）のプロパティ名と、線の太さの初期値（短辺に対する割合）。
         private const string ThicknessProperty = "_Thickness";
@@ -454,8 +469,17 @@ namespace ZeroShotUdonUI.EditorTools
         {
             RectTransform rect = CreateRect("Panel", null, Vector2.zero);
             Stretch(rect);
-            AddImage(rect, GetMaterial(MaterialRole.Surface), true);
+            Image image = AddImage(rect, GetMaterial(MaterialRole.Surface), true);
+            AddShadowMargin(rect, image);
             return rect.gameObject;
+        }
+
+        // 影を描く帯の分だけ、描く範囲を外に広げる。見た目の大きさと、操作に反応する範囲は変えない。
+        private static void AddShadowMargin(RectTransform rect, Image image)
+        {
+            rect.offsetMin -= new Vector2(ShadowMargin, ShadowMargin);
+            rect.offsetMax += new Vector2(ShadowMargin, ShadowMargin);
+            image.raycastPadding = new Vector4(ShadowMargin, ShadowMargin, ShadowMargin, ShadowMargin);
         }
 
         /// <summary>
@@ -1101,19 +1125,22 @@ namespace ZeroShotUdonUI.EditorTools
             UIBuilder.RecordOverrides(arrow, arrowRect, arrowImage);
 
             // 一覧のひな形。本体のすぐ下に、同じ幅で出す。高さは、選択肢が少なければ TMP_Dropdown が縮める。
+            // パネルと同じく影を付けるので、描く範囲を影の帯の分だけ外に広げ、中身はその内側に置く。
             RectTransform template = CreateRect("Template", rect, Vector2.zero);
             template.anchorMin = new Vector2(0f, 0f);
             template.anchorMax = new Vector2(1f, 0f);
             template.pivot = new Vector2(0.5f, 1f);
-            template.anchoredPosition = new Vector2(0f, -DropdownListGap);
-            template.sizeDelta = new Vector2(0f, DropdownListMaxHeight);
-            AddImage(template, GetMaterial(MaterialRole.Surface), true);
+            template.anchoredPosition = new Vector2(0f, -DropdownListGap + ShadowMargin);
+            template.sizeDelta = new Vector2(ShadowMargin * 2f, DropdownListMaxHeight + ShadowMargin * 2f);
+            Image templateImage = AddImage(template, GetMaterial(MaterialRole.Surface), true);
+            templateImage.raycastPadding = new Vector4(ShadowMargin, ShadowMargin, ShadowMargin, ShadowMargin);
 
             // 右は、スクロールバーの分を空ける。
             float scrollbarSpace = DropdownListPadding + ScrollbarWidth + DropdownListPadding;
             RectTransform viewport = CreateRect(UIBuilder.ScrollViewportName, template, Vector2.zero);
             Stretch(viewport);
-            viewport.offsetMax = new Vector2(-scrollbarSpace, 0f);
+            viewport.offsetMin = new Vector2(ShadowMargin, ShadowMargin);
+            viewport.offsetMax = new Vector2(-(ShadowMargin + scrollbarSpace), -ShadowMargin);
             viewport.gameObject.AddComponent<RectMask2D>();
 
             // 項目を並べる場所。TMP_Dropdown は、ひな形での「中身と項目の大きさの差」を、一覧の上下の余白として使う。
@@ -1166,8 +1193,8 @@ namespace ZeroShotUdonUI.EditorTools
             // 一覧の角が丸いので、スクロールバーは縁から少し内側に置く。
             Scrollbar scrollbar = BuildScrollbar(template);
             RectTransform scrollbarRect = (RectTransform)scrollbar.transform;
-            scrollbarRect.anchoredPosition = new Vector2(-DropdownListPadding, 0f);
-            scrollbarRect.sizeDelta = new Vector2(ScrollbarWidth, -DropdownListPadding * 4f);
+            scrollbarRect.anchoredPosition = new Vector2(-(ShadowMargin + DropdownListPadding), 0f);
+            scrollbarRect.sizeDelta = new Vector2(ScrollbarWidth, -(ShadowMargin * 2f + DropdownListPadding * 4f));
             AddVerticalScroll(template, viewport, content, scrollbar);
 
             // ひな形は、普段は表示しない。
@@ -1362,10 +1389,19 @@ namespace ZeroShotUdonUI.EditorTools
         }
 
         /// <summary>
-        /// マテリアルの色・角丸・枠線を、その役割の初期値にする。
+        /// マテリアルの色・角丸・枠線・影を、その役割の初期値にする。影はパネル用（Surface）だけに付ける。
         /// </summary>
         internal static void ApplyDefaultStyle(Material material, MaterialRole role)
         {
+            if (role != MaterialRole.Icon)
+            {
+                bool hasShadow = role == MaterialRole.Surface;
+                material.SetFloat(ShadowMarginProperty, hasShadow ? ShadowMargin : 0f);
+                material.SetColor(ShadowColorProperty, hasShadow ? ShadowColor : Color.clear);
+                material.SetFloat(ShadowBlurProperty, ShadowBlur);
+                material.SetVector(ShadowOffsetProperty, ShadowOffset);
+            }
+
             switch (role)
             {
                 case MaterialRole.Surface:

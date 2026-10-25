@@ -32,6 +32,8 @@ Material:
     - _BorderWidth: 2
     - _ColorMask: 15
     - _Radius: 28
+    - _ShadowBlur: 24
+    - _ShadowMargin: 32
     - _Stencil: 0
     - _StencilComp: 8
     - _StencilOp: 0
@@ -41,4 +43,6 @@ Material:
     m_Colors:
     - _BorderColor: {r: 1, g: 1, b: 1, a: 0.14}
     - _Color: {r: 0.09, g: 0.1, b: 0.13, a: 0.96}
+    - _ShadowColor: {r: 0, g: 0, b: 0, a: 0.35}
+    - _ShadowOffset: {r: 0, g: -6, b: 0, a: 0}
   m_BuildTextureStacks: []

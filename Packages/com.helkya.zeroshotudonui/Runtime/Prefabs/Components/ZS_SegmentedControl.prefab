@@ -105,6 +105,7 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 6260215518454254942}
   eventTarget: {fileID: 0}
   eventName: 
+  syncRelay: {fileID: 0}
   selectedMaterial: {fileID: 2100000, guid: e8abb2c35fc8a0241a401d121b9aa9ab, type: 2}
   unselectedMaterial: {fileID: 2100000, guid: f582512934b07db4596d3e1847675cd4, type: 2}
 --- !u!114 &6260215518454254942

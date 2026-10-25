@@ -203,6 +203,7 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 2932131041351938049}
   eventTarget: {fileID: 0}
   eventName: 
+  syncRelay: {fileID: 0}
   slider: {fileID: 276286895101740692}
   valueLabel: {fileID: 5408289645117099664}
   valueFormat: 0%

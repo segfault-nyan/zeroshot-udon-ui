@@ -41,6 +41,11 @@ namespace ZeroShotUdonUI.EditorTools
             public float radius;
             public float borderWidth;
             public Color borderColor;
+
+            // 影（FND-02）。0.3.0 以前の控えには無いので、hasEffects が false なら使わない。
+            public bool hasEffects;
+            public Color shadowColor;
+            public float shadowBlur;
         }
 
         [System.Serializable]
@@ -98,6 +103,12 @@ namespace ZeroShotUdonUI.EditorTools
                 material.SetFloat(PrefabGenerator.RadiusProperty, saved.radius);
                 material.SetFloat(PrefabGenerator.BorderWidthProperty, saved.borderWidth);
                 material.SetColor(PrefabGenerator.BorderColorProperty, saved.borderColor);
+                if (saved.hasEffects)
+                {
+                    material.SetColor(PrefabGenerator.ShadowColorProperty, saved.shadowColor);
+                    material.SetFloat(PrefabGenerator.ShadowBlurProperty, saved.shadowBlur);
+                }
+
                 EditorUtility.SetDirty(material);
                 AssetDatabase.SaveAssetIfDirty(material);
                 restored = true;
@@ -154,6 +165,9 @@ namespace ZeroShotUdonUI.EditorTools
                 radius = material.GetFloat(PrefabGenerator.RadiusProperty),
                 borderWidth = material.GetFloat(PrefabGenerator.BorderWidthProperty),
                 borderColor = material.GetColor(PrefabGenerator.BorderColorProperty),
+                hasEffects = true,
+                shadowColor = material.GetColor(PrefabGenerator.ShadowColorProperty),
+                shadowBlur = material.GetFloat(PrefabGenerator.ShadowBlurProperty),
             };
         }
 
@@ -169,10 +183,17 @@ namespace ZeroShotUdonUI.EditorTools
 
         private static bool Matches(MaterialStyle a, MaterialStyle b)
         {
-            return Matches(a.color, b.color)
+            bool basicMatches = Matches(a.color, b.color)
                 && Matches(a.borderColor, b.borderColor)
                 && Mathf.Abs(a.radius - b.radius) <= Tolerance
                 && Mathf.Abs(a.borderWidth - b.borderWidth) <= Tolerance;
+
+            // 影は、両方の控えにあるときだけ比べる。
+            if (!basicMatches || !a.hasEffects || !b.hasEffects)
+                return basicMatches;
+
+            return Matches(a.shadowColor, b.shadowColor)
+                && Mathf.Abs(a.shadowBlur - b.shadowBlur) <= Tolerance;
         }
 
         private static bool Matches(Color a, Color b)

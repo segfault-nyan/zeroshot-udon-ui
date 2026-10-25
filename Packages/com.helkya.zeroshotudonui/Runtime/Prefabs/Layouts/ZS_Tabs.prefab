@@ -101,6 +101,7 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 6915401282286576535}
   eventTarget: {fileID: 0}
   eventName: 
+  syncRelay: {fileID: 0}
   header: {fileID: 8057972855345677471}
   pageContainer: {fileID: 4141481522480294812}
 --- !u!114 &6915401282286576535

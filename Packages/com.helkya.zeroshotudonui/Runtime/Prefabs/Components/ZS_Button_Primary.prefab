@@ -160,6 +160,7 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 5845640901978009084}
   eventTarget: {fileID: 0}
   eventName: 
+  syncRelay: {fileID: 0}
 --- !u!114 &5845640901978009084
 MonoBehaviour:
   m_ObjectHideFlags: 0

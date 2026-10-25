@@ -65,6 +65,7 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 1426539839808640015}
   eventTarget: {fileID: 0}
   eventName: 
+  syncRelay: {fileID: 0}
   minValue: 0
   maxValue: 10
   step: 1

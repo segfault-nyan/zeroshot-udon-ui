@@ -80,6 +80,8 @@ namespace ZeroShotUdonUI.EditorTools
             DrawFloat("角丸の半径", surface, PrefabGenerator.RadiusProperty, 0f, MaxRadius);
             DrawColor("枠線の色", surface, PrefabGenerator.BorderColorProperty, true);
             DrawFloat("枠線の太さ", surface, PrefabGenerator.BorderWidthProperty, 0f, MaxBorderWidth);
+            DrawAlpha("影の濃さ", surface, PrefabGenerator.ShadowColorProperty, 1f);
+            DrawFloat("影のぼかし", surface, PrefabGenerator.ShadowBlurProperty, 1f, PrefabGenerator.ShadowMargin);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("操作部品", EditorStyles.boldLabel);
@@ -124,6 +126,22 @@ namespace ZeroShotUdonUI.EditorTools
             EditorGUI.BeginChangeCheck();
             result = EditorGUILayout.ColorField(new GUIContent(label), current, true, showAlpha, false);
             return EditorGUI.EndChangeCheck();
+        }
+
+        // マテリアルの色の不透明度だけを編集する欄を描く。影の濃さに使う。
+        private static void DrawAlpha(string label, Material material, string property, float max)
+        {
+            Color color = material.GetColor(property);
+
+            EditorGUI.BeginChangeCheck();
+            float alpha = EditorGUILayout.Slider(label, color.a, 0f, max);
+            if (!EditorGUI.EndChangeCheck())
+                return;
+
+            Undo.RecordObject(material, UndoName);
+            color.a = alpha;
+            material.SetColor(property, color);
+            MarkChanged(material);
         }
 
         // マテリアルの数値を1つ編集する欄を描く。

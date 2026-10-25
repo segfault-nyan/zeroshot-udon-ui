@@ -355,7 +355,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: -14, y: 0}
-  m_SizeDelta: {x: -28, y: 0}
+  m_SizeDelta: {x: -92, y: -64}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &6003766837036231944
 MonoBehaviour:
@@ -407,8 +407,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -8, y: 0}
-  m_SizeDelta: {x: 12, y: -32}
+  m_AnchoredPosition: {x: -40, y: 0}
+  m_SizeDelta: {x: 12, y: -96}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!222 &5660343764776565336
 CanvasRenderer:
@@ -809,6 +809,7 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 4318852336842509108}
   eventTarget: {fileID: 0}
   eventName: 
+  syncRelay: {fileID: 0}
   dropdown: {fileID: 9039057258387172934}
 --- !u!114 &4318852336842509108
 MonoBehaviour:
@@ -1015,8 +1016,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 0, y: -8}
-  m_SizeDelta: {x: 0, y: 204}
+  m_AnchoredPosition: {x: 0, y: 24}
+  m_SizeDelta: {x: 64, y: 268}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &1173400990524109297
 CanvasRenderer:
@@ -1041,7 +1042,7 @@ MonoBehaviour:
   m_Material: {fileID: 2100000, guid: 66f641305bfcfc146842d75698da266c, type: 2}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_RaycastPadding: {x: 32, y: 32, z: 32, w: 32}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
