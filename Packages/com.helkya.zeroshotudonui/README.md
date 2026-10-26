@@ -93,6 +93,8 @@ public class LampSwitch : UdonSharpBehaviour
 - ウィンドウを閉じていても、同期は止まりません。
 - 同期を有効にすると、シーンの最上位に `ZS Sync` というオブジェクトができます。**このオブジェクトは、消したり無効にしたりしないでください。** 同期が止まります。
 
+デモシーン（`Tools > ZeroShot Udon UI > デモシーンを生成`）の左手前にある「Sync」のパネルで、同期の動きを試せます。見本のスクリプトは `Samples/SyncDemoController.cs` です。
+
 詳しくは、[部品リファレンス](Documentation~/Reference.md)の「同期」を見てください。
 
 ## うまく動かないとき

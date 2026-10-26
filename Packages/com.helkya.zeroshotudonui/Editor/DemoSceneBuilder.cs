@@ -4,6 +4,7 @@ using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UdonSharpEditor;
 using UnityEngine.SceneManagement;
 using ZeroShotUdonUI.Samples;
 
@@ -31,6 +32,11 @@ namespace ZeroShotUdonUI.EditorTools
         private static readonly Vector3 LayoutsPosition = new Vector3(1.5f, 1.3f, 0.9f);
         private const float DialogForwardOffset = 0.12f;
 
+        // 部品一覧のさらに左に、同期の見本を置く。操作で変わる物は、パネルの手前の下に並べる。
+        private static readonly Vector3 SyncPosition = new Vector3(-1.5f, 1.3f, 0.9f);
+        private const float SyncObjectsForwardOffset = 0.3f;
+        private const float SyncObjectsHeight = 0.55f;
+
         // Canvas 単位。1 単位 = 1mm。部品一覧は、見出しの下に幅 480 の列を2つ並べる。
         private static readonly Vector2 GallerySize = new Vector2(1080f, 1000f);
         private static readonly Vector2 GalleryTitlePosition = new Vector2(0f, 436f);
@@ -44,11 +50,14 @@ namespace ZeroShotUdonUI.EditorTools
         private static readonly Vector2 ScrollAreaSize = new Vector2(520f, 200f);
         private static readonly Vector2 DialogSize = new Vector2(480f, 260f);
         private const int ScrollItemCount = 8;
+        private static readonly Vector2 SyncSize = new Vector2(600f, 640f);
+        private static readonly Vector2 RingButtonSize = new Vector2(160f, 56f);
+        private static readonly Vector2 RingLabelSize = new Vector2(300f, 40f);
 
         [MenuItem("Tools/ZeroShot Udon UI/デモシーンを生成")]
         private static void Generate()
         {
-            if (!UIBuilder.EnsureSetup(typeof(SampleController)))
+            if (!UIBuilder.EnsureSetup(typeof(SampleController), typeof(SyncDemoController)))
                 return;
 
             GameObject worldPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WorldPrefabPath);
@@ -83,6 +92,7 @@ namespace ZeroShotUdonUI.EditorTools
             BuildGallery(GalleryPosition, FaceSpawn(GalleryPosition));
             SampleBuilder.BuildSettingsSample(SettingsPosition, FaceSpawn(SettingsPosition));
             BuildLayouts(LayoutsPosition, FaceSpawn(LayoutsPosition));
+            BuildSyncDemo(SyncPosition, FaceSpawn(SyncPosition));
 
             PrefabGenerator.EnsureFolder(SceneFolder);
             if (!EditorSceneManager.SaveScene(scene, ScenePath))
@@ -92,6 +102,88 @@ namespace ZeroShotUdonUI.EditorTools
             }
 
             EditorUtility.DisplayDialog(UIBuilder.DisplayName, "デモシーンを生成しました。\n" + ScenePath, "OK");
+        }
+
+        /// <summary>
+        /// 同期（SYS-06）の見本を作る。パネルの部品を操作すると、手前の球と立方体が変わり、それが全員に反映される。
+        /// 比較のために、同期しないトグルも1つ置く。
+        /// </summary>
+        private static void BuildSyncDemo(Vector3 position, Quaternion rotation)
+        {
+            GameObject root = new GameObject("Sync Demo");
+
+            GameObject canvas = UIBuilder.CreatePanelCanvas("Sync", SyncSize, out RectTransform content);
+            canvas.transform.SetParent(root.transform, false);
+            UIBuilder.PlaceInWorld(canvas, position, rotation);
+
+            UIBuilder.CreateLabel(content, "Sync", LabelStyle.Heading);
+            UIBuilder.CreateLabel(content, "These controls are shared with everyone in the instance.", LabelStyle.Caption);
+
+            ToggleSwitch lampToggle = UIBuilder.CreateToggle(content, true);
+            UIBuilder.CreateSettingRow(content, "Lamp", lampToggle);
+            SliderControl sizeSlider = UIBuilder.CreateSlider(content, 0f, 1f, 0.5f);
+            UIBuilder.CreateSettingRow(content, "Size", sizeSlider);
+            SegmentedControl colorSelector = UIBuilder.CreateSegmented(content, new[] { "Blue", "Green", "Orange" }, 0);
+            UIBuilder.CreateSettingRow(content, "Color", colorSelector);
+
+            RectTransform ringRow = UIBuilder.CreateStack(content, StackDirection.Horizontal);
+            ButtonControl ringButton = UIBuilder.CreateButton(ringRow, "Ring", ButtonStyle.Primary);
+            UIBuilder.SetSize(ringButton, RingButtonSize);
+            TextMeshProUGUI ringLabel = UIBuilder.CreateLabel(ringRow, "Ring! x 0", LabelStyle.Body);
+            UIBuilder.SetSize(ringLabel, RingLabelSize);
+
+            UIBuilder.CreateLabel(content, "Not synced (only on your screen)", LabelStyle.Caption);
+            ToggleSwitch localLampToggle = UIBuilder.CreateToggle(content, false);
+            UIBuilder.CreateSettingRow(content, "Local lamp", localLampToggle);
+
+            // 操作で変わる物。パネルの手前の下に、左から球、立方体、小さな球の順で並べる。
+            Vector3 toViewer = rotation * Vector3.back;
+            Vector3 right = rotation * Vector3.right;
+            Vector3 center = position + toViewer * SyncObjectsForwardOffset;
+            center.y = SyncObjectsHeight;
+
+            GameObject lamp = CreateObject(root.transform, PrimitiveType.Sphere, "Lamp", center - right * 0.22f, 0.2f);
+            GameObject cube = CreateObject(root.transform, PrimitiveType.Cube, "Cube", center, 0.3f);
+            GameObject localLamp = CreateObject(root.transform, PrimitiveType.Sphere, "Local Lamp", center + right * 0.22f, 0.12f);
+
+            // 見本のスクリプトは、常に有効なオブジェクトに付ける。
+            SyncDemoController controller = root.AddUdonSharpComponent<SyncDemoController>();
+            SerializedObject serializedController = new SerializedObject(controller);
+            serializedController.FindProperty("lampToggle").objectReferenceValue = lampToggle;
+            serializedController.FindProperty("sizeSlider").objectReferenceValue = sizeSlider;
+            serializedController.FindProperty("colorSelector").objectReferenceValue = colorSelector;
+            serializedController.FindProperty("ringLabel").objectReferenceValue = ringLabel;
+            serializedController.FindProperty("localLampToggle").objectReferenceValue = localLampToggle;
+            serializedController.FindProperty("lamp").objectReferenceValue = lamp;
+            serializedController.FindProperty("localLamp").objectReferenceValue = localLamp;
+            serializedController.FindProperty("cube").objectReferenceValue = cube.transform;
+            serializedController.FindProperty("cubeRenderer").objectReferenceValue = cube.GetComponent<Renderer>();
+            serializedController.ApplyModifiedPropertiesWithoutUndo();
+            UdonSharpEditorUtility.GetBackingUdonBehaviour(controller).hideFlags |= HideFlags.HideInInspector;
+
+            UIBuilder.SetEvent(lampToggle, controller, nameof(SyncDemoController.OnLampChanged));
+            UIBuilder.SetEvent(sizeSlider, controller, nameof(SyncDemoController.OnSizeChanged));
+            UIBuilder.SetEvent(colorSelector, controller, nameof(SyncDemoController.OnColorChanged));
+            UIBuilder.SetEvent(ringButton, controller, nameof(SyncDemoController.OnRing));
+            UIBuilder.SetEvent(localLampToggle, controller, nameof(SyncDemoController.OnLocalLampChanged));
+
+            // 「Local lamp」以外を同期する。
+            UIBuilder.SetSynced(lampToggle, true);
+            UIBuilder.SetSynced(sizeSlider, true);
+            UIBuilder.SetSynced(colorSelector, true);
+            UIBuilder.SetSynced(ringButton, true);
+        }
+
+        // 見本の物を作る。当たり判定は、プレイヤーの移動やレーザーの邪魔になるので外す。
+        private static GameObject CreateObject(Transform parent, PrimitiveType type, string name, Vector3 position, float size)
+        {
+            GameObject created = GameObject.CreatePrimitive(type);
+            created.name = name;
+            created.transform.SetParent(parent, false);
+            created.transform.position = position;
+            created.transform.localScale = new Vector3(size, size, size);
+            Object.DestroyImmediate(created.GetComponent<Collider>());
+            return created;
         }
 
         /// <summary>
